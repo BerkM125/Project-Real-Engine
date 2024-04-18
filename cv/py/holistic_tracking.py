@@ -10,9 +10,13 @@ IMAGE_FILES = []
 BG_COLOR = (192, 192, 192) # gray
 with mp_holistic.Holistic(
     static_image_mode=True,
-    model_complexity=2,
+    model_complexity=0,
     enable_segmentation=True,
-    refine_face_landmarks=True) as holistic:
+    refine_face_landmarks=False,
+    min_detection_confidence=0.3,
+    min_tracking_confidence=0.3,
+    smooth_segmentation=True) as holistic:
+  
   for idx, file in enumerate(IMAGE_FILES):
     image = cv2.imread(file)
     image_height, image_width, _ = image.shape
@@ -42,7 +46,7 @@ with mp_holistic.Holistic(
     #     landmark_drawing_spec=None,
     #     connection_drawing_spec=mp_drawing_styles
     #     .get_default_face_mesh_tesselation_style())
-    
+
     mp_drawing.draw_landmarks(
         annotated_image,
         results.pose_landmarks,
