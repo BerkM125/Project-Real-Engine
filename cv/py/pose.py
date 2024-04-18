@@ -56,8 +56,9 @@ def print_result(result: PoseLandmarkerResult, output_image: mp.Image, timestamp
 # what should num_poses be? (default is 1)
 options = PoseLandmarkerOptions(
   base_options=BaseOptions(model_asset_path=model_path),
-  running_mode=VisionRunningMode.LIVE_STREAM,
-  result_callback=print_result)
+  running_mode=VisionRunningMode.IMAGE,
+  min_pose_presence_confidence=0.3,
+  min_tracking_confidence=0.3)
 
 with PoseLandmarker.create_from_options(options) as landmarker:
   # Start capturing from camera
@@ -77,21 +78,15 @@ with PoseLandmarker.create_from_options(options) as landmarker:
 
     # Get the timestamp of the frame
     timestamp = cam.get(cv.CAP_PROP_POS_MSEC)
-
+    
     # to break out of loop when 'q' is pressed
     if cv.waitKey(1) & 0xFF == ord('q'):
         break
 
-    # Display the frame
-    #cv.imshow('Webcam', frame)
-
     # Convert the frame received from OpenCV to a MediaPipe’s Image object.
-    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=np.array(frame))  # np.array() necessary?
-
-    # RUN TASK  
-    # Send live image data to perform pose landmarking.
-    # The results are accessible via the `result_callback` provided in `PoseLandmarkerOptions` object.
-    landmarker.detect_async(mp_image,int(timestamp))
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=np.array(frame))
+    
+    RESULT = landmarker.detect(mp_image)
 
     # VISUALIZE DETECTION RESULT -- WIP
     if type(RESULT) is not type(None):
