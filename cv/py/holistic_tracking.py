@@ -1,6 +1,19 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import socket
+
+# Sample data for global variables
+host, port = "127.0.0.1", 13000
+send_data = "right-shoulder: 0.005, 0.005, 0.005"
+
+# SOCK_STREAM means TCP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+try:
+   sock.connect((host, port))
+finally:
+   print("connected")
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -10,8 +23,19 @@ IMAGE_FILES = []
 RESULT_BUFFER = []
 BG_COLOR = (70, 70, 70)
 
+# Server socket connection simplifier
+def ping_server():
+  global host, port, send_data, sock
+  try:    
+      sock.sendall(send_data.encode("utf-8"))
+      response = sock.recv(1024).decode("utf-8")
+      print(response)
+  finally:
+      print("Done")
+
+# Process the results and export 3D data to wavefront file
 def process_results():
-  global RESULT_BUFFER
+  global RESULT_BUFFER, send_data
   dump_file = open("./out/coordinate_dump.obj", "w")
 
   for res in RESULT_BUFFER:
@@ -39,6 +63,19 @@ def process_results():
 
   dump_file.close()
 
+# Send socket signal to game TCP listener for body position control
+def ping_body_part(part, idx):
+    global send_data
+    curr_pose_lm = results.pose_world_landmarks.landmark[idx]
+    pl = curr_pose_lm
+    if "wrist" in part:
+       pl.x *= -2.0
+       pl.y *= 2.0
+       pl.z *= 2.0
+    send_data = str(part) + ": " + str(str(-pl.x) + ", " + str(-pl.y) + ", " + str(-pl.z))
+    ping_server()   
+
+# Begin OpenCV video capture and holistic body pose estimation
 cap = cv2.VideoCapture(0)
 with mp_holistic.Holistic(    
     model_complexity=1,
@@ -78,6 +115,14 @@ with mp_holistic.Holistic(
         mp_holistic.POSE_CONNECTIONS,
         landmark_drawing_spec=mp_drawing_styles
         .get_default_pose_landmarks_style())
+    
+    # Ping all relevant body parts for update on the 3D end
+    ping_body_part("right-shoulder", 12)
+    ping_body_part("left-shoulder", 11)
+    ping_body_part("right-elbow", 14)
+    ping_body_part("left-elbow", 13)
+    ping_body_part("right-wrist", 16)
+    ping_body_part("left-wrist", 15)
 
     # Draw all hand-related landmarks
     # Left hand
@@ -101,4 +146,5 @@ with mp_holistic.Holistic(
       break
 
 process_results()
+sock.close()
 cap.release()
