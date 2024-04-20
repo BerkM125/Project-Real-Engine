@@ -69,9 +69,13 @@ def ping_body_part(part, idx):
     curr_pose_lm = results.pose_world_landmarks.landmark[idx]
     pl = curr_pose_lm
     if "wrist" in part:
-       pl.x *= -2.0
-       pl.y *= 2.0
-       pl.z *= 2.0
+      pl.x *= -2.0
+      pl.y *= 2.0
+      pl.z *= 2.0
+    if "elbow" in part:
+      pl.x *= 1.25
+      pl.z *= 1.25
+      pl.y *= 1.15
     send_data = str(part) + ": " + str(str(-pl.x) + ", " + str(-pl.y) + ", " + str(-pl.z))
     ping_server()   
 
