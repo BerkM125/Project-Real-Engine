@@ -21,6 +21,7 @@ mp_holistic = mp.solutions.holistic
 
 IMAGE_FILES = []
 RESULT_BUFFER = []
+INITIAL_WORLD_LANDMARKS = None
 BG_COLOR = (70, 70, 70)
 
 # Server socket connection simplifier
@@ -68,15 +69,7 @@ def ping_body_part(part, idx):
     global send_data
     curr_pose_lm = results.pose_world_landmarks.landmark[idx]
     pl = curr_pose_lm
-    if "wrist" in part:
-      pl.x *= -2.0
-      pl.y *= 2.0
-      pl.z *= 2.0
-    if "elbow" in part:
-      pl.x *= 1.25
-      pl.z *= 1.25
-      pl.y *= 1.15
-    send_data = str(part) + ": " + str(str(-pl.x) + ", " + str(-pl.y) + ", " + str(-pl.z))
+    send_data = str(part) + ": " + str(str(pl.x) + ", " + str(pl.y) + ", " + str(pl.z))
     ping_server()   
 
 # Begin OpenCV video capture and holistic body pose estimation
@@ -101,8 +94,12 @@ with mp_holistic.Holistic(
     image.flags.writeable = False
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     results = holistic.process(image)
+
+    if type(INITIAL_WORLD_LANDMARKS) is type(None):
+       INITIAL_WORLD_LANDMARKS = results.pose_world_landmarks
+       
     #print(results)
-    RESULT_BUFFER.append(results)
+    #RESULT_BUFFER.append(results)
 
     # Draw landmark annotation on the image.
     image.flags.writeable = True
@@ -125,8 +122,8 @@ with mp_holistic.Holistic(
     ping_body_part("left-shoulder", 11)
     ping_body_part("right-elbow", 14)
     ping_body_part("left-elbow", 13)
-    ping_body_part("right-wrist", 16)
-    ping_body_part("left-wrist", 15)
+    ping_body_part("right-wrist", 15)
+    ping_body_part("left-wrist", 16)
 
     # Draw all hand-related landmarks
     # Left hand
@@ -149,6 +146,6 @@ with mp_holistic.Holistic(
     if cv2.waitKey(5) & 0xFF == 27:
       break
 
-process_results()
+#process_results()
 sock.close()
 cap.release()

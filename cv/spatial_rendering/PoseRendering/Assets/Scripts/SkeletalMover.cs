@@ -11,60 +11,62 @@ public class SkeletalMover : MonoBehaviour
 
     // Network received data
     public string networkData = "";
+    private string part = "SHIT";
 
     // Start is called before the first frame update
     void Start()
     {
-        boneMap["right-shoulder"] = "Bone.029";
-        boneMap["right-elbow"] = "Bone.030";
-        boneMap["left-shoulder"] = "Bone.006";
-        boneMap["left-elbow"] = "Bone.007";
-        boneMap["left-wrist"] = "Bone.031";
-        boneMap["right-wrist"] = "Bone.008";
+        {
+            boneMap["right-shoulder"] = "Bone.029";
+            boneMap["right-elbow"] = "Bone.030";
+            boneMap["left-shoulder"] = "Bone.006";
+            boneMap["left-elbow"] = "Bone.007";
+            boneMap["right-wrist"] = "Bone.031";
+            boneMap["left-wrist"] = "Bone.008";
 
-        // HANDS
-        // Left
-        boneMap["left-middle-first"] = "Bone.009";
-        boneMap["left-middle-second"] = "Bone.010";
-        boneMap["left-middle-third"] = "Bone.011";
+            // HANDS
+            // Left
+            boneMap["left-middle-first"] = "Bone.009";
+            boneMap["left-middle-second"] = "Bone.010";
+            boneMap["left-middle-third"] = "Bone.011";
 
-        boneMap["left-index-first"] = "Bone.017";
-        boneMap["left-index-second"] = "Bone.018";
-        boneMap["left-index-third"] = "Bone.019";
+            boneMap["left-index-first"] = "Bone.017";
+            boneMap["left-index-second"] = "Bone.018";
+            boneMap["left-index-third"] = "Bone.019";
 
-        boneMap["left-thumb-first"] = "Bone.013";
-        boneMap["left-thumb-second"] = "Bone.014";
-        boneMap["left-thumb-third"] = "Bone.015";
+            boneMap["left-thumb-first"] = "Bone.013";
+            boneMap["left-thumb-second"] = "Bone.014";
+            boneMap["left-thumb-third"] = "Bone.015";
 
-        boneMap["left-ring-first"] = "Bone.021";
-        boneMap["left-ring-second"] = "Bone.022";
-        boneMap["left-ring-third"] = "Bone.023";
+            boneMap["left-ring-first"] = "Bone.021";
+            boneMap["left-ring-second"] = "Bone.022";
+            boneMap["left-ring-third"] = "Bone.023";
 
-        boneMap["left-pinkie-first"] = "Bone.025";
-        boneMap["left-pinkie-second"] = "Bone.026";
-        boneMap["left-pinkie-third"] = "Bone.027";
+            boneMap["left-pinkie-first"] = "Bone.025";
+            boneMap["left-pinkie-second"] = "Bone.026";
+            boneMap["left-pinkie-third"] = "Bone.027";
 
-        // Right
-        boneMap["right-middle-first"] = "Bone.032";
-        boneMap["right-middle-second"] = "Bone.033";
-        boneMap["right-middle-third"] = "Bone.034";
+            // Right
+            boneMap["right-middle-first"] = "Bone.032";
+            boneMap["right-middle-second"] = "Bone.033";
+            boneMap["right-middle-third"] = "Bone.034";
 
-        boneMap["right-index-first"] = "Bone.040";
-        boneMap["right-index-second"] = "Bone.041";
-        boneMap["right-index-third"] = "Bone.042";
+            boneMap["right-index-first"] = "Bone.040";
+            boneMap["right-index-second"] = "Bone.041";
+            boneMap["right-index-third"] = "Bone.042";
 
-        boneMap["right-thumb-first"] = "Bone.036";
-        boneMap["right-thumb-second"] = "Bone.037";
-        boneMap["right-thumb-third"] = "Bone.038";
+            boneMap["right-thumb-first"] = "Bone.036";
+            boneMap["right-thumb-second"] = "Bone.037";
+            boneMap["right-thumb-third"] = "Bone.038";
 
-        boneMap["right-ring-first"] = "Bone.044";
-        boneMap["right-ring-second"] = "Bone.045";
-        boneMap["right-ring-third"] = "Bone.046";
+            boneMap["right-ring-first"] = "Bone.044";
+            boneMap["right-ring-second"] = "Bone.045";
+            boneMap["right-ring-third"] = "Bone.046";
 
-        boneMap["right-pinkie-first"] = "Bone.048";
-        boneMap["right-pinkie-second"] = "Bone.049";
-        boneMap["right-pinkie-third"] = "Bone.050";
-
+            boneMap["right-pinkie-first"] = "Bone.048";
+            boneMap["right-pinkie-second"] = "Bone.049";
+            boneMap["right-pinkie-third"] = "Bone.050";
+        }
         foreach (KeyValuePair<string, string> entry in boneMap)
         {
             initialBoneLocations[entry.Key] = getBone(entry.Key).transform.position;
@@ -77,7 +79,7 @@ public class SkeletalMover : MonoBehaviour
     {
         if (!partsMapped) return;
         Vector3 data;
-        string part = "SHIT";
+       
         data = parseDataForVector(out part);
         if (part != "SHIT")
             placeBone(part, data);
