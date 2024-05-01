@@ -14,7 +14,6 @@ public class LocalListener : MonoBehaviour
     public string globalDataRecieved = "";
 
     public SkeletalMover avatar;
-    public SphereControl sphere;
 
     private Thread thread;
     private TcpListener server;
@@ -64,8 +63,6 @@ public class LocalListener : MonoBehaviour
             // Convert the received string of data to the format we are using
             globalDataRecieved = dataReceived;
             avatar.networkData = globalDataRecieved;
-            sphere.networkData = globalDataRecieved;
-            sphere.considerVector = true;
             nwStream.Write(buffer, 0, bytesRead);
         }
     }

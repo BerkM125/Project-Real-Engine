@@ -13,7 +13,7 @@ import socket
 
 # Sample data for global variables
 host, port = "127.0.0.1", 13000
-send_data = "right-shoulder: 0.005, 0.005, 0.005"
+send_data = ""
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -24,7 +24,6 @@ finally:
 
 hand_model_path = "./landmarkers/hand_landmarker.task"
 RESULT = None
-INITIAL_HAND_RESULTS = None
 hand_map = {}
 
 BaseOptions = mp.tasks.BaseOptions
@@ -55,6 +54,7 @@ def invert_handedness(hn):
 # Send socket signal to game TCP listener for hand position control
 def ping_landmarks_to_client(world_landmarks, handedness):
     global send_data
+    temp_data = ""
     for idx in range(len(world_landmarks)):
         if type(world_landmarks[idx]) is type(None):
             continue
@@ -62,15 +62,14 @@ def ping_landmarks_to_client(world_landmarks, handedness):
             pl = world_landmarks[idx][wdx]
             if str(wdx) not in hand_map:
                 continue
-            part = f"right-{hand_map[str(wdx)]}"
+            part = f"{invert_handedness(handedness[0][0].display_name.lower())}-{hand_map[str(wdx)]}";
+            temp_data += f"{part}: {(pl.x)}, {(pl.y)}, {(pl.z)}"
+            if (wdx < len(world_landmarks[idx])-1):
+                temp_data += "|"
 
-            init_landmarks = INITIAL_HAND_RESULTS.hand_world_landmarks
-            init_pl = init_landmarks[idx][wdx]
-
-            send_data = (
-                 f"{part}: {(init_pl.z - pl.z)}, {(init_pl.y - pl.y)*2.0}, {(init_pl.x - pl.x)}"
-            )
-            ping_server()
+    send_data = temp_data     
+    if(send_data != ""):   
+        ping_server()      
 
 
 # To annotate a frame
@@ -139,20 +138,9 @@ with HandLandmarker.create_from_options(options) as landmarker:
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=np.array(frame))
         RESULT = landmarker.detect(mp_image)
 
-        if (
-            type(INITIAL_HAND_RESULTS) == type(None)
-            or len(INITIAL_HAND_RESULTS.hand_world_landmarks) < 2
-        ):
-            INITIAL_HAND_RESULTS = RESULT
-        elif len(INITIAL_HAND_RESULTS.hand_world_landmarks[0]) < 21:
-            INITIAL_HAND_RESULTS = RESULT
-        else:
-            if type(RESULT.hand_world_landmarks) is not type(None):
-                hw_marks = RESULT.hand_world_landmarks
-                ping_landmarks_to_client(hw_marks, RESULT.handedness)
-
-        # VISUALIZE DETECTION RESULT -- WIP
-        if type(RESULT) is not type(None):
+        if type(RESULT.hand_landmarks) is not type(None):
+            hw_marks = RESULT.hand_landmarks
+            ping_landmarks_to_client(hw_marks, RESULT.handedness)
             annotated_frame = draw_landmarks_on_image(mp_image.numpy_view())
             cv.imshow("Frame", cv.flip(annotated_frame, 1))
 

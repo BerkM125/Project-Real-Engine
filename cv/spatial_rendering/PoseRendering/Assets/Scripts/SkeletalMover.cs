@@ -11,11 +11,49 @@ public class SkeletalMover : MonoBehaviour
 
     // Network received data
     public string networkData = "";
-    private string part = "SHIT";
+    private string part = "EMPTY_PART";
+    private HashSet<string> nonAvatarPartSupport = new HashSet<string>
+        {
+            "right-wrist",
+            "right-index-first",
+            "right-middle-first",
+            "right-ring-first",
+            "right-pinkie-first",
+            "right-thumb-first",
+            "left-wrist",
+            "left-index-first",
+            "left-middle-first",
+            "left-ring-first",
+            "left-pinkie-first",
+            "left-thumb-first",
+
+            "right-index-second",
+            "right-middle-second",
+            "right-ring-second",
+            "right-pinkie-second",
+            "right-thumb-second",
+            "left-index-second",
+            "left-middle-second",
+            "left-ring-second",
+            "left-pinkie-second",
+            "left-thumb-second",
+
+            "right-index-third",
+            "right-middle-third",
+            "right-ring-third",
+            "right-pinkie-third",
+            "right-thumb-third",
+            "left-index-third",
+            "left-middle-third",
+            "left-ring-third",
+            "left-pinkie-third",
+            "left-thumb-third"
+        };
 
     // Start is called before the first frame update
     void Start()
     {
+        // All of this is simply mapping to one avatar model
         {
             boneMap["right-shoulder"] = "Bone.029";
             boneMap["right-elbow"] = "Bone.030";
@@ -77,45 +115,46 @@ public class SkeletalMover : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!partsMapped) return;
-        Vector3 data;
-       
-        data = parseDataForVector(out part);
-        if (part != "SHIT")
-            placeBone(part, data);
-
-        //shiftBone("left-shoulder", new Vector3(-0.005f, 0.005f, 0f));
+        parseNetworkData();
     }
 
-    // Parse incoming network stream for three vector values
-    private Vector3 parseDataForVector (out string partString)
+    private void parseNetworkData ()
     {
         if (networkData == "")
+            return;
+
+        // Split the input string by '|' character
+        string[] parcels = networkData.Split('|');
+
+        foreach (string parcel in parcels)
         {
-            //Debug.Log("network empty rn");
-            partString = "SHIT";
-            return new Vector3(0.0f, 0.0f, 0.0f);
+            if (!parcel.Contains(":")) break;
+
+            // Split each parcel by ':' character to separate body part and coordinates
+            string[] parts = parcel.Split(':');
+
+            // Trim any leading or trailing white spaces
+            string bodyPart = parts[0].Trim();
+            string coordinates = parts[1].Trim();
+
+            string[] xyz = coordinates.Split(',');
+
+            // Extract X, Y, and Z coordinates
+            float x = float.Parse(xyz[0].Trim());
+            float y = float.Parse(xyz[1].Trim());
+            float z = float.Parse(xyz[2].Trim());
+
+            if (nonAvatarPartSupport.Contains(bodyPart))
+            {
+                GameObject currJoint = GameObject.Find(bodyPart);
+                if (currJoint != null)
+                {
+                    currJoint.transform.position = new Vector3(x * 20, (-y * 20) + 10, z * 20);
+                }
+            }
+
         }
-        // Splitting based on colon to separate name and values
-        string[] parts = networkData.Split(':');
-
-        // Extracting name
-        string name = parts[0].Trim();
-        partString = name;
-        // Splitting the values based on comma
-        string[] valuesStr = parts[1].Split(',');
-
-        // Parsing the values into doubles
-        double[] values = new double[3];
-        for (int i = 0; i < valuesStr.Length; i++)
-        {
-            values[i] = double.Parse(valuesStr[i].Trim());
-        }
-
-        Vector3 res = new Vector3((float)values[0], (float)values[1], (float)values[2]) + initialBoneLocations[name];
-        return res;
     }
-
     // Get bone from name of bone
     private GameObject getBone(string part)
     {
