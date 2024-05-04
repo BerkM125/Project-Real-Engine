@@ -11,6 +11,7 @@ import numpy as np  # for converting frame to array for MP Image object
 import cv2 as cv  # for capturing livestream with camera
 import socket
 import os
+
 ROOT_DIR = os.path.dirname(__file__)
 
 # Sample data for global variables
@@ -44,14 +45,15 @@ def ping_server():
     try:
         sock.sendall(send_data.encode("utf-8"))
         response = sock.recv(1024).decode("utf-8")
-        #print(response)
+        # print(response)
     finally:
         return
-        #print("Done")
+        # print("Done")
 
 
 def invert_handedness(hn):
     return "left" if hn == "right" else "right"
+
 
 # Send socket signal to game TCP listener for hand position control
 def ping_landmarks_to_client(world_landmarks, handedness):
@@ -66,12 +68,12 @@ def ping_landmarks_to_client(world_landmarks, handedness):
             if str(wdx) not in hand_map:
                 continue
 
-            part = f"{(handedness[idx][0].display_name.lower())}-{hand_map[str(wdx)]}";
+            part = f"{(handedness[idx][0].display_name.lower())}-{hand_map[str(wdx)]}"
             temp_data += f"{part}: {(pl.x)}, {(pl.y)}, {(pl.z)}"
-            if (wdx < len(world_landmarks[idx])-1):
+            if wdx < len(world_landmarks[idx]) - 1:
                 temp_data += "|"
 
-    return temp_data      
+    return temp_data
 
 
 # To annotate a frame
@@ -144,12 +146,12 @@ with HandLandmarker.create_from_options(options) as landmarker:
             hw_marks = RESULT.hand_landmarks
 
             if len(RESULT.handedness) == 2:
-                send_data = ping_landmarks_to_client(hw_marks, RESULT.handedness);
+                send_data = ping_landmarks_to_client(hw_marks, RESULT.handedness)
                 ping_server()
-            
+
             send_data = ""
-            #annotated_frame = draw_landmarks_on_image(mp_image.numpy_view())
-            #cv.imshow("Frame", cv.flip(annotated_frame, 1))
+            # annotated_frame = draw_landmarks_on_image(mp_image.numpy_view())
+            # cv.imshow("Frame", cv.flip(annotated_frame, 1))
 
     cam.release()
     cv.destroyAllWindows()

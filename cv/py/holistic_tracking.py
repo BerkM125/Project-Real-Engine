@@ -2,150 +2,177 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import socket
+import os
+import json
 
+ROOT_DIR = os.path.dirname(__file__)
 # Sample data for global variables
 host, port = "127.0.0.1", 13000
-send_data = "right-shoulder: 0.005, 0.005, 0.005"
+
+send_data = ""
+RESULT = None
+hand_map = {}
+pose_map = {}
 
 # SOCK_STREAM means TCP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 try:
-   sock.connect((host, port))
+    sock.connect((host, port))
 finally:
-   print("connected")
+    print("connected")
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_holistic = mp.solutions.holistic
 
-IMAGE_FILES = []
-RESULT_BUFFER = []
-INITIAL_WORLD_LANDMARKS = None
-BG_COLOR = (70, 70, 70)
+# Load hand mapping dictionary from JSON file
+with open(os.path.join(ROOT_DIR, "./hand_mapping_dict.json")) as dict_file:
+    hand_map = json.load(dict_file)
+
+with open(os.path.join(ROOT_DIR, "./pose_mapping_dict.json")) as dict_file:
+    pose_map = json.load(dict_file)
 
 # Server socket connection simplifier
 def ping_server():
-  global host, port, send_data, sock
-  try:    
-      sock.sendall(send_data.encode("utf-8"))
-      response = sock.recv(1024).decode("utf-8")
-      print(response)
-  finally:
-      print("Done")
+    global host, port, send_data, sock
+    try:
+        sock.sendall(send_data.encode("utf-8"))
+        response = sock.recv(1024).decode("utf-8")
+        # print(response)
+    finally:
+        return
+        # print("Done")
+    
+def ping_pose_to_client(pose_landmarks, left_landmarks, right_landmarks):
+    temp_data = ""
 
-# Process the results and export 3D data to wavefront file
-def process_results():
-  global RESULT_BUFFER, send_data
-  dump_file = open("./out/coordinate_dump.obj", "w")
-
-  for res in RESULT_BUFFER:
-    dump_file.write("# Pose coords: \n")
-    if type(res.pose_landmarks) is not type(None):
-        for idx in range(len(res.pose_landmarks.landmark)):
-            curr_pose_lm = res.pose_landmarks.landmark[idx]
+    # Now add pose landmark data to the large socket stream string
+    if type(pose_landmarks) is not type(None):
+        for idx in range(len(pose_landmarks.landmark)):
+            curr_pose_lm = pose_landmarks.landmark[idx]
             pl = curr_pose_lm
-            dump_file.write(str("v " + str(pl.x) + " " + str(pl.y) + " " + str(pl.z) + " 1.0\n"))
 
-    if type(res.left_hand_landmarks) is not type(None):
-        dump_file.write("# Left Hand coords: \n")
-        for idx in range(len(res.left_hand_landmarks.landmark)):
-            curr_hand_lm = res.left_hand_landmarks.landmark[idx]
-            hl = curr_hand_lm
-            dump_file.write(str("v " + str(hl.x) + " " + str(hl.y) + " " + str(hl.z) + " 1.0\n"))
+            # Check presence in relevant JSON map
+            if str(idx) not in pose_map:
+                continue
+            # Take index of the landmark to identify the body part
+            # Take the body part's coordinates and add it to the string
+            part = f"{pose_map[str(idx)]}"
+            temp_data += f"{part}: {(pl.x)}, {(pl.y)}, {(pl.z)}"
 
-    dump_file.write("# Right Hand coords: \n")
+            # Prevent a parsing error with a || duplication or | at EOL
+            if idx < len(pose_landmarks.landmark) - 1:
+                temp_data += "|"     
 
-    if type(res.right_hand_landmarks) is not type(None):
-        for idx in range(len(res.right_hand_landmarks.landmark)):
-            curr_hand_lm = res.right_hand_landmarks.landmark[idx]
-            hl = curr_hand_lm
-            dump_file.write(str("v " + str(hl.x) + " " + str(hl.y) + " " + str(hl.z) + " 1.0\n"))
+    # Now add left landmark data to the large socket stream string
+    if type(left_landmarks) is not type(None):
+        for idx in range(len(left_landmarks.landmark)):
+            hl = left_landmarks.landmark[idx]
 
-  dump_file.close()
+            # Check presence in relevant JSON map
+            if str(idx) not in hand_map:
+                continue
+            # Take index of the landmark to identify the body part
+            # Take the body part's coordinates and add it to the string
+            part = f"left-{hand_map[str(idx)]}"
+            temp_data += f"{part}: {(hl.x)}, {(hl.y)}, {(hl.z)}"
 
-# Send socket signal to game TCP listener for body position control
-def ping_body_part(part, idx):
-    global send_data
-    curr_pose_lm = results.pose_world_landmarks.landmark[idx]
-    pl = curr_pose_lm
-    send_data = str(part) + ": " + str(str(pl.x) + ", " + str(pl.y) + ", " + str(pl.z))
-    ping_server()   
+            # Prevent a parsing error with a || duplication or | at EOL
+            if idx < len(left_landmarks.landmark) - 1:
+                temp_data += "|"
+
+    # Now add right landmark data to the large socket stream string
+    if type(right_landmarks) is not type(None):
+        for idx in range(len(right_landmarks.landmark)):
+            hl = right_landmarks.landmark[idx]
+
+            # Check presence in relevant JSON map
+            if str(idx) not in hand_map:
+                continue
+            # Take index of the landmark to identify the body part
+            # Take the body part's coordinates and add it to the string
+            part = f"right-{hand_map[str(idx)]}"
+            temp_data += f"{part}: {(hl.x)}, {(hl.y)}, {(hl.z)}"
+
+            # Prevent a parsing error with a || duplication or | at EOL
+            if idx < len(right_landmarks.landmark) - 1:
+                temp_data += "|"
+
+    return temp_data
 
 # Begin OpenCV video capture and holistic body pose estimation
 cap = cv2.VideoCapture(0)
-with mp_holistic.Holistic(    
+with mp_holistic.Holistic(
     model_complexity=1,
     static_image_mode=False,
     enable_segmentation=True,
     refine_face_landmarks=False,
     min_detection_confidence=0.5,
-    min_tracking_confidence=0.5) as holistic:
-  while cap.isOpened():
-    success, image = cap.read()
+    min_tracking_confidence=0.5,
+) as holistic:
+    while cap.isOpened():
+        success, image = cap.read()
 
-    if not success:
-      print("Ignoring empty camera frame.")
-      # If loading a video, use 'break' instead of 'continue'.
-      continue
+        if not success:
+            print("Ignoring empty camera frame.")
+            # If loading a video, use 'break' instead of 'continue'.
+            continue
 
-    # To improve performance, optionally mark the image as not writeable to
-    # pass by reference.
-    image.flags.writeable = False
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    results = holistic.process(image)
+        # To improve performance, optionally mark the image as not writeable to
+        # pass by reference.
+        image.flags.writeable = False
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        results = holistic.process(image)
 
-    if type(INITIAL_WORLD_LANDMARKS) is type(None):
-       INITIAL_WORLD_LANDMARKS = results.pose_world_landmarks
-       
-    #print(results)
-    #RESULT_BUFFER.append(results)
+        # Draw landmark annotation on the image.
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-    # Draw landmark annotation on the image.
-    image.flags.writeable = True
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        new_img = np.zeros(shape=(image.shape), dtype=np.uint8)
+        new_img.flags.writeable = True
+        new_img[:] = (70, 70, 70)
 
-    new_img = np.zeros(shape=(image.shape), dtype=np.uint8)
-    new_img.flags.writeable = True
-    new_img[:] = BG_COLOR
+        if type(results.left_hand_landmarks) is not type(None) and type(
+            results.right_hand_landmarks
+        ) is not type(None):
+            send_data = ping_pose_to_client(
+                results.pose_landmarks,
+                results.left_hand_landmarks,
+                results.right_hand_landmarks,
+            )
+            ping_server()
+            send_data = ""
 
-    # Draw the pose-related landmarks
-    mp_drawing.draw_landmarks(
-        new_img,
-        results.pose_landmarks,
-        mp_holistic.POSE_CONNECTIONS,
-        landmark_drawing_spec=mp_drawing_styles
-        .get_default_pose_landmarks_style())
-    
-    # Ping all relevant body parts for update on the 3D end
-    ping_body_part("right-shoulder", 12)
-    ping_body_part("left-shoulder", 11)
-    ping_body_part("right-elbow", 14)
-    ping_body_part("left-elbow", 13)
-    ping_body_part("right-wrist", 15)
-    ping_body_part("left-wrist", 16)
+        # Draw the pose-related landmarks
+        mp_drawing.draw_landmarks(
+            new_img,
+            results.pose_landmarks,
+            mp_holistic.POSE_CONNECTIONS,
+            landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
+        )
 
-    # Draw all hand-related landmarks
-    # Left hand
-    mp_drawing.draw_landmarks(
-        new_img,
-        results.left_hand_landmarks,
-        mp_holistic.HAND_CONNECTIONS,
-        landmark_drawing_spec=mp_drawing_styles
-        .get_default_hand_landmarks_style())
-    
-    # Right hand
-    mp_drawing.draw_landmarks(
-        new_img,
-        results.right_hand_landmarks,
-        mp_holistic.HAND_CONNECTIONS,
-        landmark_drawing_spec=mp_drawing_styles
-        .get_default_hand_landmarks_style())
+        # Draw all hand-related landmarks
+        # Left hand
+        mp_drawing.draw_landmarks(
+            new_img,
+            results.left_hand_landmarks,
+            mp_holistic.HAND_CONNECTIONS,
+            landmark_drawing_spec=mp_drawing_styles.get_default_hand_landmarks_style(),
+        )
 
-    cv2.imshow('Full Body Tracking', cv2.flip(new_img, 1))
-    if cv2.waitKey(5) & 0xFF == 27:
-      break
+        # Right hand
+        mp_drawing.draw_landmarks(
+            new_img,
+            results.right_hand_landmarks,
+            mp_holistic.HAND_CONNECTIONS,
+            landmark_drawing_spec=mp_drawing_styles.get_default_hand_landmarks_style(),
+        )
 
-#process_results()
+        cv2.imshow("Full Body Tracking", cv2.flip(new_img, 1))
+        if cv2.waitKey(5) & 0xFF == 27:
+            break
+
+# process_results()
 sock.close()
 cap.release()

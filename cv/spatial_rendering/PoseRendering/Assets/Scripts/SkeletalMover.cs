@@ -17,11 +17,12 @@ public class SkeletalMover : MonoBehaviour
         "ring",
         "pinkie"
     };
-    GameObject [] givenCylinders = new GameObject[32];
+    
 
     // If parts not mapped yet, do not proceed with avatar part transform yet.
     private bool partsMapped = false;
     private uint bIndex = 0;
+    private uint pIndex = 0;
 
     // Network received data
     public string networkData = "";
@@ -63,8 +64,15 @@ public class SkeletalMover : MonoBehaviour
             "left-middle-third",
             "left-ring-third",
             "left-pinkie-third",
-            "left-thumb-third"
+            "left-thumb-third",
+
+            "right-shoulder",
+            "left-shoulder",
+            "right-elbow",
+            "left-elbow"
         };
+    GameObject[] givenCylinders = new GameObject[32];
+    GameObject[] givenBodyCylinders = new GameObject[4];
 
     // Callback template function to a BodyPartHandler.
     private delegate bool BodyPartHandler(string bodyPart, Vector3 socketDataVector);
@@ -130,6 +138,7 @@ public class SkeletalMover : MonoBehaviour
             // For right hand connections
             connectDigits("right");
             connectDigits("left");
+            connectBodyParts();
         }
         foreach (KeyValuePair<string, string> entry in boneMap)
         {
@@ -141,13 +150,18 @@ public class SkeletalMover : MonoBehaviour
         {
             givenCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         }
+
+        for (cN = 0; cN < 4; cN++)
+        {
+            givenBodyCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        }
         partsMapped = true;
     }
 
     // Update is called once per frame
     void Update()
     {
-        parseNetworkData(SimpleHandRenderer);
+        parseNetworkData(SimpleBodyRenderer, SimpleHandRenderer);
     }
     
     // Map digit connections 
@@ -166,6 +180,13 @@ public class SkeletalMover : MonoBehaviour
         }
     }
 
+    private void connectBodyParts ()
+    {
+        boneConnections["right-shoulder"] = "right-elbow";
+        boneConnections["right-elbow"] = "left-wrist";
+        boneConnections["left-shoulder"] = "left-elbow";
+        boneConnections["left-elbow"] = "right-wrist";
+    }
     // Hand rendering function, upon network data reception this function should be invoked by data parser
     private bool SimpleHandRenderer(string bodyPart, Vector3 socketDataVector)
     {
@@ -202,6 +223,44 @@ public class SkeletalMover : MonoBehaviour
         return true;
     }
 
+    // BODY PART rendering
+    private bool SimpleBodyRenderer(string bodyPart, Vector3 socketDataVector)
+    {
+        float x = socketDataVector.x;
+        float y = socketDataVector.y;
+        float z = socketDataVector.z;
+
+        if (pIndex == 4)
+        {
+            pIndex = 0;
+        }
+        if (nonAvatarPartSupport.Contains(bodyPart))
+        {
+            GameObject currJoint = GameObject.Find(bodyPart);
+            GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart]);
+
+            if (currJoint != null)
+            {
+                currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
+                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
+                            z * JOINT_SCALING_FACTOR);
+
+                GameObject bone = givenBodyCylinders[pIndex];
+
+                Debug.Log("BONE FOUND: " + bone);
+                Debug.Log("CURR JOINT: " + currJoint.name + " CONNECTED JOINT: " + connectedJoint.name);
+
+                UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
+                pIndex++;
+            }
+        }
+        else
+        {
+            return false;
+        }
+        return true;
+    }
+
     // AVATAR hand rendering function, upon network data reception this function should be invoked by data parser
     private bool AvatarHandRenderer(string bodyPart, Vector3 socketDataVector)
     {
@@ -219,7 +278,7 @@ public class SkeletalMover : MonoBehaviour
         return true;
     }
     // Parse the network data stored inside this script's network data string
-    private void parseNetworkData (BodyPartHandler partHandlerCallback)
+    private void parseNetworkData (BodyPartHandler partHandlerCallback, BodyPartHandler handCallback)
     {
         if (networkData == "")
             return;
@@ -246,9 +305,15 @@ public class SkeletalMover : MonoBehaviour
             float y = float.Parse(xyz[1].Trim());
             float z = float.Parse(xyz[2].Trim());
 
-            if (!partHandlerCallback(bodyPart, new Vector3(x, y, z)))
+            if ( !(bodyPart.Contains("shoulder") || bodyPart.Contains("elbow")))
             {
-                Debug.Log("Something went wrong with the Part Handler Callback, returning... ");
+                if (!handCallback(bodyPart, new Vector3(x, y, z)))
+                    Debug.Log("Something went wrong with the Part Handler Callback, returning... ");
+            }
+            else
+            {
+                if (!partHandlerCallback(bodyPart, new Vector3(x, y, z)))
+                    Debug.Log("Something went wrong with the Part Handler Callback, returning... ");
             }
         }
     }
