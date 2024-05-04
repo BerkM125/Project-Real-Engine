@@ -8,7 +8,7 @@ public class SkeletalMover : MonoBehaviour
     // Bone mapping for avatar
     private Dictionary<string, string> boneMap = new Dictionary<string, string>();
     private Dictionary<string, Vector3> initialBoneLocations = new Dictionary<string, Vector3>();
-    private Dictionary<string, string> boneConnections = new Dictionary<string, string>();
+    private Dictionary<string, List<string>> boneConnections = new Dictionary<string, List<string>>();
     private string[] handDigits =
     {
         "thumb",
@@ -71,8 +71,8 @@ public class SkeletalMover : MonoBehaviour
             "right-elbow",
             "left-elbow"
         };
-    GameObject[] givenCylinders = new GameObject[32];
-    GameObject[] givenBodyCylinders = new GameObject[4];
+    GameObject[] givenCylinders = new GameObject[40];
+    GameObject[] givenBodyCylinders = new GameObject[5];
 
     // Callback template function to a BodyPartHandler.
     private delegate bool BodyPartHandler(string bodyPart, Vector3 socketDataVector);
@@ -146,12 +146,12 @@ public class SkeletalMover : MonoBehaviour
         }
 
         int cN = 0;
-        for(cN = 0; cN < 32; cN++)
+        for(cN = 0; cN < 40; cN++)
         {
             givenCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         }
 
-        for (cN = 0; cN < 4; cN++)
+        for (cN = 0; cN < 5; cN++)
         {
             givenBodyCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         }
@@ -164,29 +164,40 @@ public class SkeletalMover : MonoBehaviour
         parseNetworkData(SimpleBodyRenderer, SimpleHandRenderer);
     }
     
+    // Links body parts, joints to one another
+    private void linkJointsByKeyValue (string key, string value)
+    {
+        // If no key exists make sure to instantiate a List and avoid 
+        // key errors
+        if (!boneConnections.ContainsKey(key))  
+            boneConnections[key] = new List<string> { value }; 
+        else 
+            boneConnections[key].Add(value);
+    }
+
     // Map digit connections 
     private void connectDigits (string handedness)
     {
         for (int n = 0; n < 5; n++)
         {
             string fingerType = handDigits[n];
-            boneConnections[handedness + "-wrist"] = handedness + "-middle-first";
-            boneConnections[handedness + "-" + fingerType + "-first"] = 
-                    handedness + "-" + fingerType + "-second";
-            boneConnections[handedness + "-" + fingerType + "-second"] = 
-                    handedness + "-" + fingerType + "-first";
-            boneConnections[handedness + "-" + fingerType + "-third"] =
-                    handedness + "-" + fingerType + "-second";
+            linkJointsByKeyValue(handedness + "-wrist", handedness + "-" + fingerType + "-first");
+            linkJointsByKeyValue(handedness + "-" + fingerType + "-first", handedness + "-" + fingerType + "-second");
+            linkJointsByKeyValue(handedness + "-" + fingerType + "-second", handedness + "-" + fingerType + "-first");
+            linkJointsByKeyValue(handedness + "-" + fingerType + "-third", handedness + "-" + fingerType + "-second");
         }
     }
 
+    // Map large body connections
     private void connectBodyParts ()
     {
-        boneConnections["right-shoulder"] = "right-elbow";
-        boneConnections["right-elbow"] = "left-wrist";
-        boneConnections["left-shoulder"] = "left-elbow";
-        boneConnections["left-elbow"] = "right-wrist";
+        linkJointsByKeyValue("right-shoulder", "right-elbow");
+        linkJointsByKeyValue("right-shoulder", "left-shoulder");
+        linkJointsByKeyValue("right-elbow", "left-wrist");
+        linkJointsByKeyValue("left-elbow", "right-wrist");
+        linkJointsByKeyValue("left-shoulder", "left-elbow");
     }
+
     // Hand rendering function, upon network data reception this function should be invoked by data parser
     private bool SimpleHandRenderer(string bodyPart, Vector3 socketDataVector)
     {
@@ -194,27 +205,33 @@ public class SkeletalMover : MonoBehaviour
         float y = socketDataVector.y;
         float z = socketDataVector.z;
 
-        if (bIndex == 32)
+        if (bIndex == 40)
         {
             bIndex = 0;
         }
         if (nonAvatarPartSupport.Contains(bodyPart))
         {
             GameObject currJoint = GameObject.Find(bodyPart);
-            GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart]);
 
-            //Debug.Log(currJoint.name + " CONNECTING TO JOINT " + connectedJoint.name);
-
-            if (currJoint != null)
+            int cjIndex = 0;
+            while (cjIndex < boneConnections[bodyPart].Count)
             {
-                currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
-                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
-                            z * JOINT_SCALING_FACTOR);
+                GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][cjIndex]);
 
-                GameObject bone = givenCylinders[bIndex];
-                UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
+                if (currJoint != null)
+                {
+                    currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
+                                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
+                                z * JOINT_SCALING_FACTOR);
+
+                    GameObject bone = givenCylinders[bIndex];
+                    UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
+   
+                }
+                cjIndex++;
                 bIndex++;
             }
+            
         }
         else
         {
@@ -230,29 +247,35 @@ public class SkeletalMover : MonoBehaviour
         float y = socketDataVector.y;
         float z = socketDataVector.z;
 
-        if (pIndex == 4)
+        if (pIndex == 5)
         {
             pIndex = 0;
         }
         if (nonAvatarPartSupport.Contains(bodyPart))
         {
             GameObject currJoint = GameObject.Find(bodyPart);
-            GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart]);
 
-            if (currJoint != null)
+            int cjIndex = 0;
+            while (cjIndex < boneConnections[bodyPart].Count)
             {
-                currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
-                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
-                            z * JOINT_SCALING_FACTOR);
+                GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][cjIndex]);
 
-                GameObject bone = givenBodyCylinders[pIndex];
+                if (currJoint != null)
+                {
+                    currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
+                                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
+                                z * JOINT_SCALING_FACTOR);
 
-                Debug.Log("BONE FOUND: " + bone);
-                Debug.Log("CURR JOINT: " + currJoint.name + " CONNECTED JOINT: " + connectedJoint.name);
+                    GameObject bone = givenBodyCylinders[pIndex];
 
-                UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
+                    UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
+                    
+                }
                 pIndex++;
+                cjIndex++;
+
             }
+            
         }
         else
         {
@@ -321,15 +344,15 @@ public class SkeletalMover : MonoBehaviour
     // Update position of cylinder and render it between two points so as to connect them
     private void UpdateCylinderPosition(GameObject cylinder, Vector3 beginPoint, Vector3 endPoint)
     {
-        Vector3 offset = endPoint - beginPoint;
-        Vector3 position = beginPoint + (offset / 2.0f);
+        Vector3 pos = Vector3.Lerp(beginPoint, endPoint, 0.5f);
 
-        cylinder.transform.position = position;
-        cylinder.transform.LookAt(beginPoint);
-        Vector3 localScale = cylinder.transform.localScale;
-        localScale.z = (endPoint - beginPoint).magnitude;
-        cylinder.transform.localScale = localScale;
+        cylinder.transform.localScale = new Vector3(0.77f,
+                                            Vector3.Distance(beginPoint, endPoint) * 0.5f,
+                                            0.77f);
+        cylinder.transform.position = pos;
+        cylinder.transform.up = endPoint - beginPoint;
     }
+
 
     // Get bone from name of bone
     private GameObject getBone(string part)
