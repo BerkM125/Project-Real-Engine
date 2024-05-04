@@ -10,6 +10,8 @@ import json
 import numpy as np  # for converting frame to array for MP Image object
 import cv2 as cv  # for capturing livestream with camera
 import socket
+import os
+ROOT_DIR = os.path.dirname(__file__)
 
 # Sample data for global variables
 host, port = "127.0.0.1", 13000
@@ -22,7 +24,7 @@ try:
 finally:
     print("connected")
 
-hand_model_path = "./landmarkers/hand_landmarker.task"
+hand_model_path = os.path.join(ROOT_DIR, "./landmarkers/hand_landmarker.task")
 RESULT = None
 hand_map = {}
 
@@ -32,7 +34,7 @@ HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 # Load hand mapping dictionary from JSON file
-with open("hand_mapping_dict.json") as dict_file:
+with open(os.path.join(ROOT_DIR, "./hand_mapping_dict.json")) as dict_file:
     hand_map = json.load(dict_file)
 
 
@@ -53,23 +55,23 @@ def invert_handedness(hn):
 
 # Send socket signal to game TCP listener for hand position control
 def ping_landmarks_to_client(world_landmarks, handedness):
-    global send_data
     temp_data = ""
+
     for idx in range(len(world_landmarks)):
         if type(world_landmarks[idx]) is type(None):
             continue
+
         for wdx in range(len(world_landmarks[idx])):
             pl = world_landmarks[idx][wdx]
             if str(wdx) not in hand_map:
                 continue
-            part = f"{invert_handedness(handedness[0][0].display_name.lower())}-{hand_map[str(wdx)]}";
+
+            part = f"{(handedness[idx][0].display_name.lower())}-{hand_map[str(wdx)]}";
             temp_data += f"{part}: {(pl.x)}, {(pl.y)}, {(pl.z)}"
             if (wdx < len(world_landmarks[idx])-1):
                 temp_data += "|"
 
-    send_data = temp_data     
-    if(send_data != ""):   
-        ping_server()      
+    return temp_data      
 
 
 # To annotate a frame
@@ -140,9 +142,14 @@ with HandLandmarker.create_from_options(options) as landmarker:
 
         if type(RESULT.hand_landmarks) is not type(None):
             hw_marks = RESULT.hand_landmarks
-            ping_landmarks_to_client(hw_marks, RESULT.handedness)
-            annotated_frame = draw_landmarks_on_image(mp_image.numpy_view())
-            cv.imshow("Frame", cv.flip(annotated_frame, 1))
+
+            if len(RESULT.handedness) == 2:
+                send_data = ping_landmarks_to_client(hw_marks, RESULT.handedness);
+                ping_server()
+            
+            send_data = ""
+            #annotated_frame = draw_landmarks_on_image(mp_image.numpy_view())
+            #cv.imshow("Frame", cv.flip(annotated_frame, 1))
 
     cam.release()
     cv.destroyAllWindows()

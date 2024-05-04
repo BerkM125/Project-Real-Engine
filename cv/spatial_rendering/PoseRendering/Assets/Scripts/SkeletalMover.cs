@@ -5,13 +5,29 @@ using System;
 
 public class SkeletalMover : MonoBehaviour
 {
+    // Bone mapping for avatar
     private Dictionary<string, string> boneMap = new Dictionary<string, string>();
     private Dictionary<string, Vector3> initialBoneLocations = new Dictionary<string, Vector3>();
+    private Dictionary<string, string> boneConnections = new Dictionary<string, string>();
+    private string[] handDigits =
+    {
+        "thumb",
+        "index",
+        "middle",
+        "ring",
+        "pinkie"
+    };
+    GameObject [] givenCylinders = new GameObject[32];
+
+    // If parts not mapped yet, do not proceed with avatar part transform yet.
     private bool partsMapped = false;
+    private uint bIndex = 0;
 
     // Network received data
     public string networkData = "";
     private string part = "EMPTY_PART";
+    private const float JOINT_SCALING_FACTOR = 40.0f;
+    private const float JOINT_TRANSLATION_FACTOR = 30.0f;
     private HashSet<string> nonAvatarPartSupport = new HashSet<string>
         {
             "right-wrist",
@@ -49,6 +65,9 @@ public class SkeletalMover : MonoBehaviour
             "left-pinkie-third",
             "left-thumb-third"
         };
+
+    // Callback template function to a BodyPartHandler.
+    private delegate bool BodyPartHandler(string bodyPart, Vector3 socketDataVector);
 
     // Start is called before the first frame update
     void Start()
@@ -105,9 +124,22 @@ public class SkeletalMover : MonoBehaviour
             boneMap["right-pinkie-second"] = "Bone.049";
             boneMap["right-pinkie-third"] = "Bone.050";
         }
+
+        // All of this is bone connections between bones / the joints
+        {
+            // For right hand connections
+            connectDigits("right");
+            connectDigits("left");
+        }
         foreach (KeyValuePair<string, string> entry in boneMap)
         {
             initialBoneLocations[entry.Key] = getBone(entry.Key).transform.position;
+        }
+
+        int cN = 0;
+        for(cN = 0; cN < 32; cN++)
+        {
+            givenCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         }
         partsMapped = true;
     }
@@ -115,10 +147,79 @@ public class SkeletalMover : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        parseNetworkData();
+        parseNetworkData(SimpleHandRenderer);
+    }
+    
+    // Map digit connections 
+    private void connectDigits (string handedness)
+    {
+        for (int n = 0; n < 5; n++)
+        {
+            string fingerType = handDigits[n];
+            boneConnections[handedness + "-wrist"] = handedness + "-middle-first";
+            boneConnections[handedness + "-" + fingerType + "-first"] = 
+                    handedness + "-" + fingerType + "-second";
+            boneConnections[handedness + "-" + fingerType + "-second"] = 
+                    handedness + "-" + fingerType + "-first";
+            boneConnections[handedness + "-" + fingerType + "-third"] =
+                    handedness + "-" + fingerType + "-second";
+        }
     }
 
-    private void parseNetworkData ()
+    // Hand rendering function, upon network data reception this function should be invoked by data parser
+    private bool SimpleHandRenderer(string bodyPart, Vector3 socketDataVector)
+    {
+        float x = socketDataVector.x;
+        float y = socketDataVector.y;
+        float z = socketDataVector.z;
+
+        if (bIndex == 32)
+        {
+            bIndex = 0;
+        }
+        if (nonAvatarPartSupport.Contains(bodyPart))
+        {
+            GameObject currJoint = GameObject.Find(bodyPart);
+            GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart]);
+
+            //Debug.Log(currJoint.name + " CONNECTING TO JOINT " + connectedJoint.name);
+
+            if (currJoint != null)
+            {
+                currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
+                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
+                            z * JOINT_SCALING_FACTOR);
+
+                GameObject bone = givenCylinders[bIndex];
+                UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
+                bIndex++;
+            }
+        }
+        else
+        {
+            return false;
+        }
+        return true;
+    }
+
+    // AVATAR hand rendering function, upon network data reception this function should be invoked by data parser
+    private bool AvatarHandRenderer(string bodyPart, Vector3 socketDataVector)
+    {
+        float x = socketDataVector.x;
+        float y = socketDataVector.y;
+        float z = socketDataVector.z;
+
+        SimpleHandRenderer(bodyPart, socketDataVector);
+        return true;
+    }
+    
+    // Simple hand skeleton rendering function
+    private bool SimpleSkeletalRenderer()
+    {
+        return true;
+    }
+    // Parse the network data stored inside this script's network data string
+    private void parseNetworkData (BodyPartHandler partHandlerCallback)
     {
         if (networkData == "")
             return;
@@ -128,6 +229,7 @@ public class SkeletalMover : MonoBehaviour
 
         foreach (string parcel in parcels)
         {
+            
             if (!parcel.Contains(":")) break;
 
             // Split each parcel by ':' character to separate body part and coordinates
@@ -144,17 +246,26 @@ public class SkeletalMover : MonoBehaviour
             float y = float.Parse(xyz[1].Trim());
             float z = float.Parse(xyz[2].Trim());
 
-            if (nonAvatarPartSupport.Contains(bodyPart))
+            if (!partHandlerCallback(bodyPart, new Vector3(x, y, z)))
             {
-                GameObject currJoint = GameObject.Find(bodyPart);
-                if (currJoint != null)
-                {
-                    currJoint.transform.position = new Vector3(x * 20, (-y * 20) + 10, z * 20);
-                }
+                Debug.Log("Something went wrong with the Part Handler Callback, returning... ");
             }
-
         }
     }
+
+    // Update position of cylinder and render it between two points so as to connect them
+    private void UpdateCylinderPosition(GameObject cylinder, Vector3 beginPoint, Vector3 endPoint)
+    {
+        Vector3 offset = endPoint - beginPoint;
+        Vector3 position = beginPoint + (offset / 2.0f);
+
+        cylinder.transform.position = position;
+        cylinder.transform.LookAt(beginPoint);
+        Vector3 localScale = cylinder.transform.localScale;
+        localScale.z = (endPoint - beginPoint).magnitude;
+        cylinder.transform.localScale = localScale;
+    }
+
     // Get bone from name of bone
     private GameObject getBone(string part)
     {
