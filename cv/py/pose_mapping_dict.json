@@ -2,5 +2,7 @@
     "12": "left-shoulder",
     "11": "right-shoulder",
     "14": "left-elbow",
-    "13": "right-elbow"
+    "13": "right-elbow",
+    "24": "left-hip",
+    "23": "right-hip"
 }

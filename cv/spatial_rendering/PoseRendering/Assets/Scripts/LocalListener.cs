@@ -12,7 +12,6 @@ public class LocalListener : MonoBehaviour
 {
     public int connectionPort = 13000;
     public string globalDataRecieved = "";
-
     public SkeletalMover avatar;
 
     private Thread thread;

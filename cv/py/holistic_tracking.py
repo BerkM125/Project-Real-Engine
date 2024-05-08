@@ -50,8 +50,7 @@ def ping_pose_to_client(pose_landmarks, left_landmarks, right_landmarks):
     # Now add pose landmark data to the large socket stream string
     if type(pose_landmarks) is not type(None):
         for idx in range(len(pose_landmarks.landmark)):
-            curr_pose_lm = pose_landmarks.landmark[idx]
-            pl = curr_pose_lm
+            pl = pose_landmarks.landmark[idx]
 
             # Check presence in relevant JSON map
             if str(idx) not in pose_map:
@@ -133,7 +132,7 @@ with mp_holistic.Holistic(
         new_img.flags.writeable = True
         new_img[:] = (70, 70, 70)
 
-        if type(results.left_hand_landmarks) is not type(None) and type(
+        if type(results.left_hand_landmarks) is not type(None) or type(
             results.right_hand_landmarks
         ) is not type(None):
             send_data = ping_pose_to_client(
