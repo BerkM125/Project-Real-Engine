@@ -147,12 +147,12 @@ public class SkeletalMover : MonoBehaviour
         }
         // Create a bunch just make sure as many cylinders as you need are available, doesnt really matter
         int cN = 0;
-        for(cN = 0; cN < 40; cN++)
+        for(cN = 0; cN < 30; cN++)
         {
             givenCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         }
 
-        for (cN = 0; cN < 20; cN++)
+        for (cN = 0; cN < 10; cN++)
         {
             givenBodyCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         }
@@ -184,8 +184,7 @@ public class SkeletalMover : MonoBehaviour
             string fingerType = handDigits[n];
             linkJointsByKeyValue(handedness + "-wrist", handedness + "-" + fingerType + "-first");
             linkJointsByKeyValue(handedness + "-" + fingerType + "-first", handedness + "-" + fingerType + "-second");
-            linkJointsByKeyValue(handedness + "-" + fingerType + "-second", handedness + "-" + fingerType + "-first");
-            linkJointsByKeyValue(handedness + "-" + fingerType + "-third", handedness + "-" + fingerType + "-second");
+            linkJointsByKeyValue(handedness + "-" + fingerType + "-second", handedness + "-" + fingerType + "-third");
         }
     }
 
@@ -212,26 +211,29 @@ public class SkeletalMover : MonoBehaviour
         if (nonAvatarPartSupport.Contains(bodyPart))
         {
             GameObject currJoint = GameObject.Find(bodyPart);
-            int cjIndex = 0;
-            while (cjIndex < boneConnections[bodyPart].Count)
-            {
-                if (bIndex >= 40)
-                {
-                    bIndex = 0;
-                }
-                GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][cjIndex]);
+            int currentJointConnection = 0;
 
-                if (currJoint != null)
+            if (currJoint != null)
+            {
+                currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
+                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
+                            z * -JOINT_SCALING_FACTOR);
+            }
+            if (boneConnections.ContainsKey(bodyPart))
+            {
+                while (currentJointConnection < boneConnections[bodyPart].Count)
                 {
-                    currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
-                                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
-                                z * -JOINT_SCALING_FACTOR);
+                    if (bIndex >= 30)
+                    {
+                        bIndex = 0;
+                    }
+                    GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][currentJointConnection]);
+
                     GameObject bone = givenCylinders[bIndex];
                     UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
-   
+                    currentJointConnection++;
+                    bIndex++;
                 }
-                cjIndex++;
-                bIndex++;
             }
             
         }
@@ -253,35 +255,37 @@ public class SkeletalMover : MonoBehaviour
         {
             GameObject currJoint = GameObject.Find(bodyPart);
 
-            int cjIndex = 0;
-            while (cjIndex < boneConnections[bodyPart].Count)
+            float cZ = (bodyPart.Contains("elbow")) ? socketDataVector.z : currJoint.transform.position.z;
+            currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
+                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
+                cZ);
+
+            int currJointConnection = 0;
+            if (boneConnections.ContainsKey(bodyPart))
             {
-                if (pIndex == 10)
+                while (currJointConnection < boneConnections[bodyPart].Count)
                 {
-                    pIndex = 0;
-                }
-                GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][cjIndex]);
-
-                if (currJoint != null)
-                {
-                    float cZ = (bodyPart.Contains("elbow")) ? socketDataVector.z : currJoint.transform.position.z;
-                    currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
-                                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
-                                cZ);
-
-                    GameObject bone = givenBodyCylinders[pIndex];
-
-                    UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
-
-                    if (bodyPart == "right-shoulder" && boneConnections[bodyPart][cjIndex] == "left-shoulder")
+                    if (pIndex == 10)
                     {
-                        cam.transform.position = bone.transform.position;
+                        pIndex = 0;
                     }
-                    
-                }
-                pIndex++;
-                cjIndex++;
+                    GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][currJointConnection]);
 
+                    if (currJoint != null)
+                    {
+                        GameObject bone = givenBodyCylinders[pIndex];
+                        UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
+
+                        if (bodyPart == "right-shoulder" && boneConnections[bodyPart][currJointConnection] == "left-shoulder")
+                        {
+                            cam.transform.position = bone.transform.position + new Vector3(0f, 3f, -6f);
+                        }
+
+                    }
+                    pIndex++;
+                    currJointConnection++;
+
+                }
             }
         }
         else

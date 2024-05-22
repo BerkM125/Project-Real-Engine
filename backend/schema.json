@@ -1,0 +1,34 @@
+{
+    "room-name": {
+        "roomID" : "the-rooms-name",
+        "users" : {
+            "UserID-1" : {
+                "username" : "Username-1",
+                "id" : "UserID-1",
+                "xp" : 0,
+                "hp": 100,
+                "kinematics" : {
+                    "hand": {
+                        "left" : {
+
+                        },
+                        "right" : {
+
+                        }
+                    },
+                    "body" : {
+                        "shoulder" : {
+                            
+                        },
+                        "arm" : {
+
+                        },
+                        "hip" : {
+                            
+                        }
+                    }
+                }
+            }       
+        }
+    }
+}

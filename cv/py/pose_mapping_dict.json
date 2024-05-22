@@ -1,8 +1,8 @@
 {
-    "12": "left-shoulder",
-    "11": "right-shoulder",
-    "14": "left-elbow",
-    "13": "right-elbow",
-    "24": "left-hip",
-    "23": "right-hip"
+    "12": "right-shoulder",
+    "11": "left-shoulder",
+    "14": "right-elbow",
+    "13": "left-elbow",
+    "24": "right-hip",
+    "23": "left-hip"
 }

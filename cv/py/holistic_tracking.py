@@ -58,7 +58,7 @@ def ping_pose_to_client(pose_landmarks, left_landmarks, right_landmarks):
             # Take index of the landmark to identify the body part
             # Take the body part's coordinates and add it to the string
             part = f"{pose_map[str(idx)]}"
-            temp_data += f"{part}: {(pl.x)}, {(pl.y)}, {(pl.z)}"
+            temp_data += f"{part}: {(-pl.x)}, {(pl.y)}, {(pl.z)}"
 
             # Prevent a parsing error with a || duplication or | at EOL
             if idx < len(pose_landmarks.landmark) - 1:
@@ -74,8 +74,8 @@ def ping_pose_to_client(pose_landmarks, left_landmarks, right_landmarks):
                 continue
             # Take index of the landmark to identify the body part
             # Take the body part's coordinates and add it to the string
-            part = f"left-{hand_map[str(idx)]}"
-            temp_data += f"{part}: {(hl.x)}, {(hl.y)}, {(hl.z)}"
+            part = f"right-{hand_map[str(idx)]}"
+            temp_data += f"{part}: {(-hl.x)}, {(hl.y)}, {(hl.z)}"
 
             # Prevent a parsing error with a || duplication or | at EOL
             if idx < len(left_landmarks.landmark) - 1:
@@ -91,8 +91,8 @@ def ping_pose_to_client(pose_landmarks, left_landmarks, right_landmarks):
                 continue
             # Take index of the landmark to identify the body part
             # Take the body part's coordinates and add it to the string
-            part = f"right-{hand_map[str(idx)]}"
-            temp_data += f"{part}: {(hl.x)}, {(hl.y)}, {(hl.z)}"
+            part = f"left-{hand_map[str(idx)]}"
+            temp_data += f"{part}: {(-hl.x)}, {(hl.y)}, {(hl.z)}"
 
             # Prevent a parsing error with a || duplication or | at EOL
             if idx < len(right_landmarks.landmark) - 1:
@@ -167,10 +167,6 @@ with mp_holistic.Holistic(
             mp_holistic.HAND_CONNECTIONS,
             landmark_drawing_spec=mp_drawing_styles.get_default_hand_landmarks_style(),
         )
-
-        cv2.imshow("Full Body Tracking", cv2.flip(new_img, 1))
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
 
 # process_results()
 sock.close()
