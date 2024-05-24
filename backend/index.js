@@ -6,7 +6,8 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const routes = require('./routing');
-const { connectToDatabase } = require('./db');
+const db = require('./db');
+const { CONNREFUSED } = require('dns');
 
 const app = express();
 const server = http.createServer(app);
@@ -36,10 +37,23 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('User disconnected');
   });
+
+  socket.on('join-room', async (roomName) => {
+    socket.join(roomName);
+    io.to(roomName).emit("send-general-signal", `Joined room ${roomName}...`)
+  });
+
+  socket.on('update-user-data', async (roomName, userName, userData) => {
+    io.to(roomName).emit("send-general-signal", `Updating user ${userName}'s data...`);
+  });
+
+  socket.on('retrieve-game-data', async (roomName) => {
+    io.to(roomName).emit("send-game-data", await db.getUsersByRoom(roomName));
+  });
 });
 
 // Connect to MongoDB
-connectToDatabase().then(() => {
+db.connectToDatabase().then(() => {
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
