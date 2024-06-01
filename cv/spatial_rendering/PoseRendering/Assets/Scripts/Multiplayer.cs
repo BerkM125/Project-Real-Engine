@@ -2,15 +2,21 @@ using System.Collections.Generic;
 using SocketIOClient;
 using SocketIOClient.Newtonsoft.Json;
 using UnityEngine;
+using Newtonsoft.Json;
 using System;
+using UserData;
 
 public class Multiplayer : MonoBehaviour
 {
     public SocketIOUnity socket;
     public bool emitted = false;
+    public GameObject [] gamePlayers;
     // Start is called before the first frame update
     void Start()
     {
+        gamePlayers = GameObject.FindGameObjectsWithTag("Player");
+        
+
         var uri = new Uri("http://127.0.0.1:3000");
         socket = new SocketIOUnity(uri, new SocketIOOptions
         {
@@ -47,6 +53,20 @@ public class Multiplayer : MonoBehaviour
         socket.On("send-game-data", (response) =>
         {
             Debug.Log("Game data was sent: " + response);
+            string wR = response.ToString();
+
+            {
+                Debug.Log("Starting unpacking...");
+                string jsonString = wR[1..^1];
+
+                Debug.Log("Main character name: " + jsonString);
+
+                gamePlayers[0].GetComponent<PackUserData>().player = JsonConvert.DeserializeObject<User>(jsonString);
+                Debug.Log("Player currently: " + gamePlayers[0].GetComponent<PackUserData>().player.kinematics.hand.leftthumbFirst);
+                gamePlayers[0].GetComponent<PackUserData>().unpackInfoFromSerializable();
+
+                Debug.Log("Unpacking and serializing should be finished");
+            }
         });
 
         socket.On("send-general-signal", (response) =>
@@ -61,37 +81,10 @@ public class Multiplayer : MonoBehaviour
 
     public void EmitClass()
     {
-        TestClass testClass = new TestClass(new string[] { "foo", "bar", "baz", "qux" });
-        TestClass2 testClass2 = new TestClass2("lorem ipsum");
-        socket.Emit("class", testClass2);
-    }
-
-    // our test class
-    [System.Serializable]
-    class TestClass
-    {
-        public string[] arr;
-
-        public TestClass(string[] arr)
-        {
-            this.arr = arr;
-        }
-    }
-
-    [System.Serializable]
-    class TestClass2
-    {
-        public string text;
-
-        public TestClass2(string text)
-        {
-            this.text = text;
-        }
+        socket.Emit("pingKinematicInfo", GameObject.Find("MainCharacter").GetComponent<PackUserData>().player);
     }
     // Update is called once per frame
     void Update()
     {
-
-
     }
 }

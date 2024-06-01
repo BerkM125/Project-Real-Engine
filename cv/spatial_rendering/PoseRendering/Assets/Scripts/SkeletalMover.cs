@@ -1,13 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.Networking;
 using UnityEngine;
 using System;
 
 public class SkeletalMover : MonoBehaviour
 {
     // Bone mapping for avatar
-    private Dictionary<string, string> boneMap = new Dictionary<string, string>();
-    private Dictionary<string, Vector3> initialBoneLocations = new Dictionary<string, Vector3>();
+    public Dictionary<string, string> boneMap = new Dictionary<string, string>();
     private Dictionary<string, List<string>> boneConnections = new Dictionary<string, List<string>>();
     private string[] handDigits =
     {
@@ -157,6 +157,8 @@ public class SkeletalMover : MonoBehaviour
             givenBodyCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         }
         partsMapped = true;
+        // A non-existing page.
+        
     }
 
     // Update is called once per frame
@@ -164,7 +166,7 @@ public class SkeletalMover : MonoBehaviour
     {
         parseNetworkData(SimpleBodyRenderer, SimpleHandRenderer);
     }
-    
+
     // Links body parts, joints to one another
     private void linkJointsByKeyValue (string key, string value)
     {

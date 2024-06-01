@@ -48,7 +48,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('retrieve-game-data', async (roomName) => {
-    io.to(roomName).emit("send-game-data", await db.getUsersByRoom(roomName));
+    io.to(roomName).emit("send-game-data", await db.getUserByName(roomName, "Berkan"));
   });
 });
 
