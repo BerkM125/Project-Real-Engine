@@ -7,6 +7,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const routes = require('./routing');
 const db = require('./db');
+const fs = require('fs');
 const { CONNREFUSED } = require('dns');
 
 const app = express();
@@ -31,7 +32,6 @@ io.on('connection', (socket) => {
   // Room based events
   socket.on('create-room', (name) => {
     console.log(`Creating room with name ${name}...`);
-    
   });
 
   socket.on('disconnect', () => {
@@ -43,14 +43,61 @@ io.on('connection', (socket) => {
     io.to(roomName).emit("send-general-signal", `Joined room ${roomName}...`)
   });
 
-  socket.on('update-user-data', async (roomName, userName, userData) => {
-    io.to(roomName).emit("send-general-signal", `Updating user ${userName}'s data...`);
+  // Only for adding a new user
+  socket.on('add-new-user', async (roomName, userName, data) => {
+    let roomData = await db.findRoomByName(roomName);
+    let userBuffer = roomData["users"];
+    let newUserData = JSON.parse(data);
+
+    userBuffer = { ...userBuffer, [userName]: {...newUserData}};
+    await db.insertData(roomName, {
+      $set: {
+        "users" : {
+          ...userBuffer
+        }
+      }
+    });
   });
 
-  socket.on('retrieve-game-data', async (roomName) => {
-    io.to(roomName).emit("send-game-data", await db.getUserByName(roomName, "Berkan"));
+  socket.on('delete-user', async (roomName, userName) => {
+    let roomData = await db.findRoomByName(roomName);
+    let userBuffer = roomData["users"];
+    delete userBuffer[userName];
+
+    await db.insertData(roomName, {
+      $set: {
+        "users" : {
+          ...userBuffer
+        }
+      }
+    }); 
   });
+
+  // Only for updating a specific users stuff
+  socket.on('ping-kinematic-info', async (roomName, userName, data) => {
+    let roomData = await db.findRoomByName(roomName);
+    let userBuffer = roomData["users"];
+    let newUserData = JSON.parse(data);
+
+    userBuffer[userName] = newUserData;
+    //console.log(newUserData);
+
+    await db.insertData(roomName, {
+      $set: {
+        "users" : {
+          ...userBuffer
+        }
+      }
+    });
+    
+  });
+
 });
+
+// Ping these guys every half a second.
+setInterval(async () => {
+  io.to("VONK").emit("refresh-data-from-db", await db.findRoomByName("VONK"));
+}, 500);
 
 // Connect to MongoDB
 db.connectToDatabase().then(() => {
@@ -61,3 +108,5 @@ db.connectToDatabase().then(() => {
 }).catch((error) => {
   console.error('Failed to connect to database:', error);
 });
+
+module.exports = io

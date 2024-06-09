@@ -18,7 +18,6 @@ public class SkeletalMover : MonoBehaviour
         "pinkie"
     };
     
-
     // If parts not mapped yet, do not proceed with avatar part transform yet.
     private bool partsMapped = false;
     private uint bIndex = 0;
@@ -75,6 +74,9 @@ public class SkeletalMover : MonoBehaviour
             "left-hip"
 
         };
+
+    GameObject playerBodyLandmarks;
+    GameObject playerHandLandmarks;
 
     GameObject[] givenCylinders = new GameObject[40];
     GameObject[] givenBodyCylinders = new GameObject[20];
@@ -138,6 +140,9 @@ public class SkeletalMover : MonoBehaviour
             boneMap["right-pinkie-third"] = "Bone.050";
         }
         cam = GameObject.FindGameObjectWithTag("MainCamera");
+        playerHandLandmarks = gameObject.transform.Find("HandJoints").gameObject;
+        playerBodyLandmarks = gameObject.transform.Find("BodyLandmarks").gameObject;
+
         // All of this is bone connections between bones / the joints
         {
             // For right hand connections
@@ -150,11 +155,13 @@ public class SkeletalMover : MonoBehaviour
         for(cN = 0; cN < 30; cN++)
         {
             givenCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            givenCylinders[cN].transform.parent = gameObject.transform;
         }
 
         for (cN = 0; cN < 10; cN++)
         {
             givenBodyCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            givenBodyCylinders[cN].transform.parent = gameObject.transform;
         }
         partsMapped = true;
         // A non-existing page.
@@ -212,7 +219,9 @@ public class SkeletalMover : MonoBehaviour
 
         if (nonAvatarPartSupport.Contains(bodyPart))
         {
-            GameObject currJoint = GameObject.Find(bodyPart);
+
+            GameObject currJoint = playerHandLandmarks.transform.Find(bodyPart)?.gameObject;
+
             int currentJointConnection = 0;
 
             if (currJoint != null)
@@ -229,8 +238,15 @@ public class SkeletalMover : MonoBehaviour
                     {
                         bIndex = 0;
                     }
-                    GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][currentJointConnection]);
-
+                    GameObject connectedJoint = playerHandLandmarks.transform.Find(
+                                                                        boneConnections[bodyPart][currentJointConnection]
+                                                                        ).gameObject;
+                    if (connectedJoint == null)
+                    {
+                        connectedJoint = playerBodyLandmarks.transform.Find(
+                                                                         boneConnections[bodyPart][currentJointConnection]
+                                                                         )?.gameObject;
+                    }
                     GameObject bone = givenCylinders[bIndex];
                     UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
                     currentJointConnection++;
@@ -255,7 +271,7 @@ public class SkeletalMover : MonoBehaviour
 
         if (nonAvatarPartSupport.Contains(bodyPart))
         {
-            GameObject currJoint = GameObject.Find(bodyPart);
+            GameObject currJoint = playerBodyLandmarks.transform.Find(bodyPart)?.gameObject;
 
             float cZ = (bodyPart.Contains("elbow")) ? socketDataVector.z : currJoint.transform.position.z;
             currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
@@ -271,7 +287,15 @@ public class SkeletalMover : MonoBehaviour
                     {
                         pIndex = 0;
                     }
-                    GameObject connectedJoint = GameObject.Find(boneConnections[bodyPart][currJointConnection]);
+                    GameObject connectedJoint = playerBodyLandmarks.transform.Find(
+                                                                         boneConnections[bodyPart][currJointConnection]
+                                                                         )?.gameObject;
+                    if (connectedJoint == null)
+                    {
+                        connectedJoint = playerHandLandmarks.transform.Find(
+                                                                         boneConnections[bodyPart][currJointConnection]
+                                                                         )?.gameObject;
+                    }
 
                     if (currJoint != null)
                     {
@@ -331,7 +355,6 @@ public class SkeletalMover : MonoBehaviour
 
         foreach (string parcel in parcels)
         {
-            
             if (!parcel.Contains(":")) break;
 
             // Split each parcel by ':' character to separate body part and coordinates
@@ -383,7 +406,7 @@ public class SkeletalMover : MonoBehaviour
             return null;
         }
 
-        GameObject bodyPart = GameObject.Find(boneMap[part]);
+        GameObject bodyPart = gameObject.transform.Find(boneMap[part]).gameObject;
         return bodyPart;
     }
     // Part for word of the body part, Vector3 representing increment in each direction

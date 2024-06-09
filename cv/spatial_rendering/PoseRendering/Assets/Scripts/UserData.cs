@@ -6,6 +6,7 @@
 // This file is also a sort of "schema" for the format by which user data is stored
 
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace UserData
 {

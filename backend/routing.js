@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./db');
+const io = require('./index.js');
 
 // Basic GET request
 router.get('/', (req, res) => {
@@ -19,6 +20,11 @@ router.get('/tryGetting', async (req, res) => {
     res.send(await db.getUserByName("VONK", "Berkan"));
 });
 // Additional routes can be added here
+
+router.get('/getKinematicData', async (req, res) => {
+    res.send("Trying...");
+    //io.to("VONK").emit("direct-get-data", "random");
+});
 
 router.get('/getSampleJSON', async (req, res) => {
     let testRoom = {

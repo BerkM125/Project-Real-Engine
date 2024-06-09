@@ -21,8 +21,8 @@ namespace PropertyToolkit
         public static object GetPropertyValue(object obj, string jsonPropertyName)
         {
             var property = GetPropertyByJsonName(obj, jsonPropertyName);
-            Debug.Log("GETTING THIS PROP: " + property);
-            Debug.Log("POSSIBLE THIS VALUE: " + property?.GetValue(obj));
+            //Debug.Log("GETTING THIS PROP: " + property);
+            //Debug.Log("POSSIBLE THIS VALUE: " + property?.GetValue(obj));
             return property?.GetValue(obj);
         }
 

@@ -29,7 +29,8 @@ function getDb() {
 
 // Get a room itself by its name
 async function findRoomByName(name) {
-    return await retrieveData({"roomID": name });
+    var roomBufForm = await retrieveData({"roomID": name });
+    return roomBufForm[0];
 }
 
 // Get all asset info from a specific room.
@@ -69,7 +70,7 @@ async function createRoomWithName(name, flags) {
                     "hp": 100,
                     "kinematics" : {
                         "hand": {
-                            "right-wrist": "0, 10, 0",
+                            "right-wrist": "0, 100, 0",
                             "right-thumb-first": "0, 10, 0",
                             "right-thumb-second": "0, 10, 0",
                             "right-thumb-third": "0, 10, 0",
@@ -156,6 +157,7 @@ module.exports = {
     getUserByName,
     getAssetsByRoom,
     getUsersByRoom,
+    findRoomByName,
     retrieveData,
     insertSampleData,
     createRoomWithName,
