@@ -55,7 +55,7 @@ public class Multiplayer : MonoBehaviour
             {
                 UNITYTHREADQUEUE.Enqueue(() =>
                 {
-                    StartCoroutine(UpdateDBKinematicsRepeatedly(2.0f, socket));
+                    StartCoroutine(UpdateDBKinematicsRepeatedly(0.5f, socket));
                     CopyNewUserToDB(socket);
                     
                 });

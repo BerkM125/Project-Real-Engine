@@ -13,7 +13,7 @@ const { CONNREFUSED } = require('dns');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-
+let dbConnected = false;
 // Middleware to handle JSON
 app.use(express.json());
 
@@ -96,14 +96,16 @@ io.on('connection', (socket) => {
 
 // Ping these guys every half a second.
 setInterval(async () => {
-  io.to("VONK").emit("refresh-data-from-db", await db.findRoomByName("VONK"));
-}, 500);
+  if (dbConnected)
+    io.to("VONK").emit("refresh-data-from-db", await db.findRoomByName("VONK"));
+}, 50);
 
 // Connect to MongoDB
 db.connectToDatabase().then(() => {
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    dbConnected = true;
   });
 }).catch((error) => {
   console.error('Failed to connect to database:', error);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine.Networking;
 using UnityEngine;
 using System;
+using Random = UnityEngine.Random;
 
 public class SkeletalMover : MonoBehaviour
 {
@@ -17,6 +18,22 @@ public class SkeletalMover : MonoBehaviour
         "ring",
         "pinkie"
     };
+
+    // STEPS:
+    // 1) Multiply player's coords by the position factor
+    // 2) Add player's coords with the position increment
+    // 3) rotate camera to do a 180 swivel based on direction
+    
+    // MUY IMPORTANTE!! This is the vector that give sthe player a transformation.
+    public Vector3 PLAYERPOSITIONINCREMENT;
+
+    // This is the vector that the player's position could be multiplied by. This is
+    // mostly 
+    public Vector3 PLAYERPOSITIONFACTOR;
+
+    // Camera's rotation
+    public Vector3 PLAYERCAMERAROTATION;
+
     
     // If parts not mapped yet, do not proceed with avatar part transform yet.
     private bool partsMapped = false;
@@ -143,6 +160,8 @@ public class SkeletalMover : MonoBehaviour
         playerHandLandmarks = gameObject.transform.Find("HandJoints").gameObject;
         playerBodyLandmarks = gameObject.transform.Find("BodyLandmarks").gameObject;
 
+        PlayerPositioningAtSpawn();
+
         // All of this is bone connections between bones / the joints
         {
             // For right hand connections
@@ -183,6 +202,30 @@ public class SkeletalMover : MonoBehaviour
             boneConnections[key] = new List<string> { value }; 
         else 
             boneConnections[key].Add(value);
+    }
+
+    // Decide the palyer's orientation shit at spawn
+    private void PlayerPositioningAtSpawn ()
+    {
+        bool regularOrientation = Random.Range(0f, 1f) < 0.5f;
+        float randXPosition = Random.Range(-5f, 5f);
+        
+        // NO MODIFICATION (mostly)
+        if (regularOrientation)
+        {
+            PLAYERPOSITIONFACTOR = new Vector3(1f, 1f, 1f);
+            PLAYERCAMERAROTATION = new Vector3(-1.167f, 1.837f, 0.892f);
+            PLAYERPOSITIONINCREMENT = new Vector3(randXPosition, 0, 0f);
+        }
+
+        // YES MODIFICATION
+        else
+        {
+            PLAYERPOSITIONFACTOR = new Vector3(1f, 1f, -1f);
+            PLAYERCAMERAROTATION = new Vector3(1.167f, -178f, -0.892f);
+            PLAYERPOSITIONINCREMENT = new Vector3(randXPosition, 0f, 15f);
+        }
+
     }
 
     // Map digit connections 
@@ -226,9 +269,10 @@ public class SkeletalMover : MonoBehaviour
 
             if (currJoint != null)
             {
-                currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
-                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
-                            z * -JOINT_SCALING_FACTOR);
+                currJoint.transform.position = new Vector3((x * JOINT_SCALING_FACTOR) + PLAYERPOSITIONINCREMENT.x,
+                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR + PLAYERPOSITIONINCREMENT.y,
+                            (z * -JOINT_SCALING_FACTOR) + PLAYERPOSITIONINCREMENT.z);
+                //currJoint.transform.position += PLAYERPOSITIONINCREMENT;
             }
             if (boneConnections.ContainsKey(bodyPart))
             {
@@ -273,10 +317,9 @@ public class SkeletalMover : MonoBehaviour
         {
             GameObject currJoint = playerBodyLandmarks.transform.Find(bodyPart)?.gameObject;
 
-            float cZ = (bodyPart.Contains("elbow")) ? socketDataVector.z : currJoint.transform.position.z;
-            currJoint.transform.position = new Vector3(x * JOINT_SCALING_FACTOR,
-                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR,
-                cZ);
+            currJoint.transform.position = new Vector3((x * JOINT_SCALING_FACTOR) + PLAYERPOSITIONINCREMENT.x,
+                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR + PLAYERPOSITIONINCREMENT.y,
+                z + PLAYERPOSITIONINCREMENT.z);
 
             int currJointConnection = 0;
             if (boneConnections.ContainsKey(bodyPart))
@@ -304,7 +347,9 @@ public class SkeletalMover : MonoBehaviour
 
                         if (bodyPart == "right-shoulder" && boneConnections[bodyPart][currJointConnection] == "left-shoulder")
                         {
-                            cam.transform.position = bone.transform.position + new Vector3(0f, 3f, -6f);
+                            cam.transform.position = bone.transform.position + new Vector3(0f, 3f, -6f * 
+                                                                PLAYERPOSITIONFACTOR.z);
+                            cam.transform.rotation = Quaternion.Euler(PLAYERCAMERAROTATION);
                         }
 
                     }
@@ -371,14 +416,19 @@ public class SkeletalMover : MonoBehaviour
             float y = float.Parse(xyz[1].Trim());
             float z = float.Parse(xyz[2].Trim());
 
+            // MODIFY ACCORDING TO OUR DECIDED SPAWN INCREMENTS
+            Vector3 unmodif = new Vector3(x, y, z);
+            Vector3 modifPlayerPosition = Vector3.Scale(unmodif, PLAYERPOSITIONFACTOR);
+            //modifPlayerPosition += PLAYERPOSITIONINCREMENT;
+
             if ( !(bodyPart.Contains("shoulder") || bodyPart.Contains("elbow") || bodyPart.Contains("hip")))
             {
-                if (!handCallback(bodyPart, new Vector3(x, y, z)))
+                if (!handCallback(bodyPart, modifPlayerPosition))
                     Debug.Log("Something went wrong with the Part Handler Callback, returning... ");
             }
             else
             {
-                if (!partHandlerCallback(bodyPart, new Vector3(x, y, z)))
+                if (!partHandlerCallback(bodyPart, modifPlayerPosition))
                     Debug.Log("Something went wrong with the Part Handler Callback, returning... ");
             }
         }
