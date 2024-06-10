@@ -29,6 +29,12 @@
                     }
                 }
             }       
+        },
+        "attacks" : {
+            "UserID" : {
+                "type" : "attacktype",
+                "location" : "(0, 0, 0)"
+            }
         }
     }
 }

@@ -13,7 +13,8 @@ public class Multiplayer : MonoBehaviour
     // FILL THIS FIELD IN UNITY EDITOR!!! WITH THE PLAYER PREFAB
     public GameObject playerPrefab;
     public GameObject MAINCHARACTER;
-    public string NEWNAME;
+    public PoseTrackingBridge bridgeHandler;
+
     // Private vars
     Room room;
     public SocketIOUnity socket;
@@ -26,9 +27,10 @@ public class Multiplayer : MonoBehaviour
         Debug.developerConsoleEnabled = true;
         Debug.developerConsoleVisible = true;
         // Initialize the MAIN CHARACTER
-        MAINCHARACTER = GameObject.Find(NEWNAME);
         MAINCHARACTER.name = PlayerPrefs.GetString("username");
-        NEWNAME = MAINCHARACTER.name;
+
+        MAINCHARACTER.AddComponent<SkeletalMover>();
+        bridgeHandler.avatar = MAINCHARACTER.GetComponent<SkeletalMover>();
 
         // Initialize socket system
         var uri = new Uri("http://127.0.0.1:3000");
@@ -55,7 +57,7 @@ public class Multiplayer : MonoBehaviour
             {
                 UNITYTHREADQUEUE.Enqueue(() =>
                 {
-                    StartCoroutine(UpdateDBKinematicsRepeatedly(0.5f, socket));
+                    StartCoroutine(UpdateDBKinematicsRepeatedly(0.01f, socket));
                     CopyNewUserToDB(socket);
                     
                 });
@@ -165,14 +167,6 @@ public class Multiplayer : MonoBehaviour
     public void EraseUserFromDB(SocketIOUnity socket)
     {
         socket.Emit("delete-user", "VONK", MAINCHARACTER.name);
-    }
-
-    // This includes the clientside main character's kinematics, AND the objects they own
-    // Each action object will have a originUser field where the username of the action's creator is listed
-    // Each character themselves will hav ea username.
-    private void EmitPlayerData()
-    {
-
     }
 
     // Update is called once per frame

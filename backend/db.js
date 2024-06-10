@@ -114,6 +114,8 @@ async function createRoomWithName(name, flags) {
                         }
                     }
                 }
+            },
+            "attacks" : {
             }
         };
 

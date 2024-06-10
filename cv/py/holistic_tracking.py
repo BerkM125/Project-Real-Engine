@@ -10,25 +10,41 @@ import threading
 import uvicorn
 
 ROOT_DIR = os.path.dirname(__file__)
-# Sample data for global variables
-# host, port = "127.0.0.1", 13000
 
 send_data = ""
+frame_success = False
+frame_image = np.zeros((100, 100, 3), dtype=np.uint8)
+
 RESULT = None
 hand_map = {}
 pose_map = {}
 
-# # SOCK_STREAM means TCP socket
-# sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# try:
-#     sock.connect((host, port))
-# finally:
-#     print("connected")
-
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_holistic = mp.solutions.holistic
+
+gesture_path = './landmarkers/gesture_recognizer.task'
+
+BaseOptions = mp.tasks.BaseOptions
+GestureRecognizer = mp.tasks.vision.GestureRecognizer
+GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
+
+# Create a gesture recognizer instance with the image mode:
+gesture_options = GestureRecognizerOptions(
+    base_options=BaseOptions(model_asset_path=gesture_path),
+    running_mode=VisionRunningMode.IMAGE)
+cap = cv2.VideoCapture(0)
+
+prev_attack = ""
+attack_map = {
+   "Open_Palm" : "BLAST AWAY!!",
+   "Thumb_Up" : "LIGHTING!!",
+   "Closed_Fist" : "LIGHTNING!!",
+   "Victory" : "FIRE!!",
+   "Pointing_Up" : "RED!!",
+   "ILoveYou" : "WEB!!"
+}
 
 # Load hand mapping dictionary from JSON file
 with open(os.path.join(ROOT_DIR, "./hand_mapping_dict.json")) as dict_file:
@@ -36,18 +52,6 @@ with open(os.path.join(ROOT_DIR, "./hand_mapping_dict.json")) as dict_file:
 
 with open(os.path.join(ROOT_DIR, "./pose_mapping_dict.json")) as dict_file:
     pose_map = json.load(dict_file)
-
-# Server socket connection simplifier
-# def ping_server():
-#     global host, port, send_data, sock
-#     try:
-#         sock.sendall(send_data.encode("utf-8"))
-#         response = sock.recv(1024).decode("utf-8")
-#         # print(response)
-#     finally:
-#         return
-#         # print("Done")
-
 
 # Create a Socket.IO server
 sio = socketio.AsyncServer(async_mode='asgi')
@@ -120,10 +124,11 @@ async def ping_pose_to_client(pose_landmarks, left_landmarks, right_landmarks):
     return temp_data
 
 async def pose_tracking_handler():
-    global mp_holistic, send_data
+    global mp_holistic, send_data, frame_success, frame_image, prev_attack
     # Begin OpenCV video capture and holistic body pose estimation
     cap = cv2.VideoCapture(0)
-    with mp_holistic.Holistic(
+    with GestureRecognizer.create_from_options(gesture_options) as moveRecognizer, \
+    mp_holistic.Holistic(
         model_complexity=1,
         static_image_mode=False,
         enable_segmentation=True,
@@ -133,7 +138,7 @@ async def pose_tracking_handler():
     ) as holistic:
         while cap.isOpened():
             success, image = cap.read()
-
+        
             if not success:
                 print("Ignoring empty camera frame.")
                 # If loading a video, use 'break' instead of 'continue'.
@@ -145,13 +150,17 @@ async def pose_tracking_handler():
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             results = holistic.process(image)
 
-            # Draw landmark annotation on the image.
-            image.flags.writeable = True
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            gesture_recognition_result = moveRecognizer.recognize(mp.Image(image_format=mp.ImageFormat.SRGB, data=image))
 
-            new_img = np.zeros(shape=(image.shape), dtype=np.uint8)
-            new_img.flags.writeable = True
-            new_img[:] = (70, 70, 70)
+            attackInfoConcat = ""
+            attackNameSave = ""
+
+            if gesture_recognition_result.gestures:
+                move = gesture_recognition_result.gestures[0][0].category_name
+                handedness = gesture_recognition_result.handedness[0][0].category_name
+                if (attack_map.__contains__(move)):
+                    attackNameSave = attack_map[move]
+                    attackInfoConcat = f"attack:{attackNameSave},{'right' if (handedness.lower() == 'left') else 'left'}"
 
             if type(results.left_hand_landmarks) is not type(None) or type(
                 results.right_hand_landmarks
@@ -161,36 +170,12 @@ async def pose_tracking_handler():
                     results.left_hand_landmarks,
                     results.right_hand_landmarks,
                 )
+                if prev_attack is not attackNameSave:
+                    send_data += attackInfoConcat
+
+                prev_attack = attackNameSave
                 await ping_server()
                 send_data = ""
-
-            # Draw the pose-related landmarks
-            mp_drawing.draw_landmarks(
-                new_img,
-                results.pose_landmarks,
-                mp_holistic.POSE_CONNECTIONS,
-                landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
-            )
-
-            # Draw all hand-related landmarks
-            # Left hand
-            mp_drawing.draw_landmarks(
-                new_img,
-                results.left_hand_landmarks,
-                mp_holistic.HAND_CONNECTIONS,
-                landmark_drawing_spec=mp_drawing_styles.get_default_hand_landmarks_style(),
-            )
-
-            # Right hand
-            mp_drawing.draw_landmarks(
-                new_img,
-                results.right_hand_landmarks,
-                mp_holistic.HAND_CONNECTIONS,
-                landmark_drawing_spec=mp_drawing_styles.get_default_hand_landmarks_style(),
-            )
-
-    # process_results()
-    # sock.close()
     cap.release()
 
 @sio.event

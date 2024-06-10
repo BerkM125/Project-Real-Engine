@@ -98,7 +98,7 @@ io.on('connection', (socket) => {
 setInterval(async () => {
   if (dbConnected)
     io.to("VONK").emit("refresh-data-from-db", await db.findRoomByName("VONK"));
-}, 50);
+}, 10);
 
 // Connect to MongoDB
 db.connectToDatabase().then(() => {

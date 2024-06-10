@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using UserData;
-using System.Collections.Generic;
+using AttackData;
 
 namespace ClientRoom {
     [System.Serializable]
@@ -14,5 +15,8 @@ namespace ClientRoom {
 
         [JsonProperty("users")]
         public Dictionary<string, User> users { get; set; }
+
+        [JsonProperty("attacks")]
+        public Dictionary<string, Attack> attacks { get; set; }
     }
 }
