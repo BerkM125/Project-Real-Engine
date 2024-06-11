@@ -1,6 +1,10 @@
-const { MongoClient } = require('mongodb');
+/*
+* db.js - Berkan Mertan
+* A wrapper module that simplifies MongoDB usage and reduces code redundancy for our backend
+*/
 
-const uri = 'mongodb://0.0.0.0:27017'; // Replace with your MongoDB connection string
+const { MongoClient } = require('mongodb');
+const uri = 'mongodb://0.0.0.0:27017'; // Locally hosted MongoDB url, should prob transfer to an ENV file later
 
 let client, connection;
 
@@ -150,10 +154,12 @@ async function retrieveData(query) {
     return dataBuffer;
 }
 
+// Debugging ignore
 async function insertSampleData() {
     createRoomWithName("VONK");
 }
 
+// Export all our wrapped functions
 module.exports = { 
     connectToDatabase, 
     getUserByName,

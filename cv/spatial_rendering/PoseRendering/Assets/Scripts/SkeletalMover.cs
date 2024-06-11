@@ -1,3 +1,10 @@
+/*
+ * SkeletalMover.cs - Berkan Mertan
+ * Script that handles all rendering of the user's body, the initiation of their moves and attacks,
+ * their camera viewport, and the game data decided for them at spawn point. This script is therefore
+ * in charge of parsing any stored network data from the client-side pose estimation Python program as well.
+ */
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Networking;
@@ -9,6 +16,7 @@ using Random = UnityEngine.Random;
 public class SkeletalMover : MonoBehaviour
 {
     // Mapping of supported parts not pertaining to a humanoid avatar (Unity based)
+    // Could be loaded from a file later, for now this also works though it is ugly.
     private HashSet<string> nonAvatarPartSupport = new HashSet<string>
         {
             "right-wrist",
@@ -57,7 +65,7 @@ public class SkeletalMover : MonoBehaviour
     private Dictionary<string, List<string>> boneConnections = new Dictionary<string, List<string>>();
     public Dictionary<string, string> boneMap = new Dictionary<string, string>();
     private string[] handDigits =
-{
+    {
         "thumb",
         "index",
         "middle",
@@ -110,7 +118,7 @@ public class SkeletalMover : MonoBehaviour
             boneConnections[key].Add(value);
     }
 
-    // Decide the palyer's orientation shit at spawn
+    // Decide the player's orientation and directionality at spawn
     private void PlayerPositioningAtSpawn ()
     {
         bool regularOrientation = Random.Range(0f, 1f) < 0.5f;
@@ -123,10 +131,6 @@ public class SkeletalMover : MonoBehaviour
             PLAYERCAMERAROTATION = new Vector3(-1.167f, 1.837f, 0.892f);
             PLAYERPOSITIONINCREMENT = new Vector3(randXPosition, 0, 0f);
             PLAYERATTACKDIRECTION = new Vector3(1f, 1f, 1f);
-
-            GameObject.Find("REDTYPE").GetComponents<AudioSource>()[0].volume = 0;
-            GameObject.Find("REDTYPE").GetComponents<AudioSource>()[1].volume = 0;
-            GameObject.Find("BEAMTYPE").GetComponent<AudioSource>().volume = 0;
         }
 
         // YES MODIFICATION
@@ -168,29 +172,40 @@ public class SkeletalMover : MonoBehaviour
     // Hand rendering function, upon network data reception this function should be invoked by data parser
     private bool SimpleHandRenderer(string bodyPart, Vector3 socketDataVector)
     {
+        // Makes life easier...
         float x = socketDataVector.x;
         float y = socketDataVector.y;
         float z = socketDataVector.z;
 
+        // Make sure body part is supported (was used mostly in debugging)
         if (nonAvatarPartSupport.Contains(bodyPart))
         {
             GameObject currJoint = playerHandLandmarks.transform.Find(bodyPart)?.gameObject;
             int currentJointConnection = 0;
 
+            // Apply player orientation transformations that were decided at spawn
             if (currJoint != null)
             {
                 currJoint.transform.position = new Vector3((x * JOINT_SCALING_FACTOR) + PLAYERPOSITIONINCREMENT.x,
                                (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR + PLAYERPOSITIONINCREMENT.y,
                                (z * -JOINT_SCALING_FACTOR) + PLAYERPOSITIONINCREMENT.z);
             }
+
+            // If bone connection(s) exist for this body part, draw the bones.
             if (boneConnections.ContainsKey(bodyPart))
             {
+                // Loop through all bone connections that exist
                 while (currentJointConnection < boneConnections[bodyPart].Count)
                 {
+                    // Used for cylinder instances, ignore
                     if (bIndex >= HAND_SKELETAL_LIMIT)
                     {
                         bIndex = 0;
                     }
+
+                    // Find a connected joint in either the hand landmarks or the body landmarks.
+                    // Remember, a hand joint like the wrist can connect to the elbow or forearm,
+                    // so checking both landmarks is necessary.
                     GameObject connectedJoint = playerHandLandmarks.transform.Find(
                                                                         boneConnections[bodyPart][currentJointConnection]
                                                                         ).gameObject;
@@ -200,6 +215,8 @@ public class SkeletalMover : MonoBehaviour
                                                                         boneConnections[bodyPart][currentJointConnection]
                                                                         )?.gameObject;
                     }
+
+                    // Draw a bone at the appropriate position.
                     GameObject bone = givenCylinders[bIndex];
                     UpdateCylinderPosition(bone, currJoint.transform.position, connectedJoint.transform.position);
                     currentJointConnection++;
@@ -226,7 +243,9 @@ public class SkeletalMover : MonoBehaviour
         float z = socketDataVector.z;
 
         if (nonAvatarPartSupport.Contains(bodyPart))
-        {
+        {   
+            // Body part uses the same player spawn orientation transformations the hand does, with slight differences
+            // to account for the difference in body and hand coordinate results given from MediaPipe
             GameObject currJoint = playerBodyLandmarks.transform.Find(bodyPart)?.gameObject;
             currJoint.transform.position = new Vector3((x * JOINT_SCALING_FACTOR) + PLAYERPOSITIONINCREMENT.x,
                            (-y * JOINT_SCALING_FACTOR) + JOINT_TRANSLATION_FACTOR + PLAYERPOSITIONINCREMENT.y,
@@ -241,6 +260,8 @@ public class SkeletalMover : MonoBehaviour
                     {
                         pIndex = 0;
                     }
+
+                    // Find the appropriate bone, draw it.
                     GameObject connectedJoint = playerBodyLandmarks.transform.Find(
                                                                          boneConnections[bodyPart][currJointConnection]
                                                                          )?.gameObject;
@@ -506,6 +527,7 @@ public class SkeletalMover : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Parse any network data present in this instance for updates
         parseNetworkData(SimpleBodyRenderer, SimpleHandRenderer);
     }
 }

@@ -1,3 +1,8 @@
+/*
+ * StatusManagement.cs - Berkan Mertan
+ * Script used to update basic player status GUI, health bar, XP bar, etc.
+ */
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

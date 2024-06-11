@@ -1,3 +1,9 @@
+/*
+ * PackUserData.cs - Berkan Mertan
+ * Script in charge of packing and unpacking the user's in-game position and action data into/from 
+ * serializable objects storing user data for communication with the multiplayer server.
+ */
+
 using System.Collections;
 using Newtonsoft.Json;
 using UnityEngine;

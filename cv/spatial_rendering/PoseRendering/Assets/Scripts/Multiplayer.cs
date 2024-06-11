@@ -1,3 +1,19 @@
+/*
+ * Multiplayer.cs - Berkan Mertan
+ * This script handles all of the communication between the clientside gameplay and the
+ * multiplayer server. Data flow of multiplayer info is described below:
+ * 
+    // Check if all player data from the server has been unpacked first, and then package back into a serializable 
+    // for recommunication with the server if so.
+
+    // Custom network pipeline is:
+    // 1) Load data from server into EVERY client's game data
+    // 2) Allow for gameplay, updating of client-side gameobjects
+    // 3) Package each client-side player into socket-deliverable JSON data
+    // 4) Ping server with JSON data, restart loop
+
+ */
+
 using System.Collections.Generic;
 using SocketIOClient;
 using SocketIOClient.Newtonsoft.Json;
@@ -94,12 +110,14 @@ public class Multiplayer : MonoBehaviour
             yield return new WaitForSeconds(interval);
         }
     }
-    // 
+
+    // Load all room data from the DB into game
     private void RefreshDataFromDB(SocketIOResponse response)
     {
         string wR = response.ToString();
         wR = wR[1..^1];
 
+        // Queue up the room and user deserialization on the Unity client end 
         lock (UNITYTHREADQUEUE)
         {
             UNITYTHREADQUEUE.Enqueue(() =>
@@ -127,15 +145,6 @@ public class Multiplayer : MonoBehaviour
             });
         }
     }
-
-    // Check if all player data from the server has been unpacked first, and then package back into a serializable 
-    // for recommunication with the server if so.
-
-    // Pipeline is:
-    // 1) Load data from server into EVERY client's game data
-    // 2) Allow for gameplay, updating of client-side gameobjects
-    // 3) Package each client-side player into socket-deliverable JSON data
-    // 4) Ping server with JSON data, restart loop
 
     // Modify kinematic data from DB
     public void SetKinematicsToDB(SocketIOUnity socket)

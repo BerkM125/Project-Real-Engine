@@ -1,7 +1,12 @@
+/*
+* routing.js - Berkan Mertan
+* An experimental REST api for DB initialization that is largely unused except for "tryInsertion" to initialize rooms.
+* Serves as the Express.js backbone module used in index.js
+*/
+
 const express = require('express');
 const router = express.Router();
 const db = require('./db');
-const io = require('./index.js');
 
 // Basic GET request
 router.get('/', (req, res) => {
@@ -9,9 +14,6 @@ router.get('/', (req, res) => {
 });
 
 router.get('/tryInsertion', async (req, res) => {
-    // await db.createRoomWithName("VONK", {});
-    // res.send("CREATED ROOM");
-
     db.createRoomWithName("VONK");
     res.send("Updated.");
 });
@@ -23,7 +25,6 @@ router.get('/tryGetting', async (req, res) => {
 
 router.get('/getKinematicData', async (req, res) => {
     res.send("Trying...");
-    //io.to("VONK").emit("direct-get-data", "random");
 });
 
 router.get('/getSampleJSON', async (req, res) => {

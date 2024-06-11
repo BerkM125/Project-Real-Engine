@@ -1,3 +1,9 @@
+/*
+ * ClientRoom.cs - Berkan Mertan
+ * Serializable C# class used to store entire room data, matching the JSON schema used to store room info on DB.
+ */
+
+
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using UserData;

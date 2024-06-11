@@ -1,3 +1,7 @@
+/*
+ * PropertyToolkit.cs - Berkan Mertan
+ * Module housing functions for direct C# object modification with JSON property names only.
+ */
 using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
@@ -5,7 +9,7 @@ using UnityEngine;
 
 namespace PropertyToolkit
 {
-    public class Tools
+    public static class Tools
     {
         // Set the property value of a serializable C# object
         public static void SetPropertyValue(object obj, string jsonPropertyName, object value)
@@ -21,8 +25,6 @@ namespace PropertyToolkit
         public static object GetPropertyValue(object obj, string jsonPropertyName)
         {
             var property = GetPropertyByJsonName(obj, jsonPropertyName);
-            //Debug.Log("GETTING THIS PROP: " + property);
-            //Debug.Log("POSSIBLE THIS VALUE: " + property?.GetValue(obj));
             return property?.GetValue(obj);
         }
 
@@ -37,7 +39,6 @@ namespace PropertyToolkit
                 var attribute = property.GetCustomAttributes(typeof(JsonPropertyAttribute), false)
                                         .Cast<JsonPropertyAttribute>()
                                         .FirstOrDefault();
-                //Debug.Log("Attribute: " + attribute.PropertyName + " Json property name: " + jsonPropertyName);
                 if (attribute != null && attribute.PropertyName == jsonPropertyName)
                 {
                     return property;

@@ -1,3 +1,9 @@
+/*
+ * PoseTrackingBridge.cs - Berkan Mertan
+ * Script in charge of listening to the client-side pose estimation server for data, and relaying it
+ * to network data variables in SkeletalMover instances.
+ */
+
 using System.Collections.Generic;
 using SocketIOClient;
 using SocketIOClient.Newtonsoft.Json;
@@ -7,7 +13,6 @@ using System;
 using UserData;
 using ClientRoom;
 using System.Collections;
-
 
 public class PoseTrackingBridge : MonoBehaviour
 {

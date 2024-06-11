@@ -1,9 +1,7 @@
-// USER DATA NAMESPACE AND CLASS: this class is used ENTIRELY for the web interface between
-// multiplayer server and client side gameplay. This is where multiplayer server data
-// is loaded and then unpacked into appropriate GameObjects, and in-game data is packed
-// back into to update server data.
-
-// This file is also a sort of "schema" for the format by which user data is stored
+/*
+ * UserData.cs - Berkan Mertan
+ * Serializable C# class used to store user data, matching the JSON schema used to store user info on DB.
+ */
 
 using Newtonsoft.Json;
 using System.Collections.Generic;

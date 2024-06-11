@@ -1,5 +1,9 @@
+#
+# pose.py - Berkan Mertan
 # Convert footage of people from livestream into real coordinate space data using
 # MediaPipe pose landmark detection
+# Another experimental script for MediaPipe model testing
+#
 
 # Import necessary modules
 import mediapipe as mp

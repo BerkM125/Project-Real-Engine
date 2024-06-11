@@ -1,3 +1,8 @@
+/*
+ * RedCollider.cs - Berkan Mertan
+ * Collision script for the RED attack.
+ */
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

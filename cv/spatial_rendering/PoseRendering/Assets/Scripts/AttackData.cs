@@ -1,3 +1,8 @@
+/*
+ * AttackData.cs - Berkan Mertan
+ * Serializable C# class used to store attack data, matching the JSON schema used to store attack info on DB.
+ */
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

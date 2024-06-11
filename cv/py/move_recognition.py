@@ -1,3 +1,9 @@
+# 
+# move_recognition.py - Berkan Mertan
+# This Python script is not run in the main program, just a testing file for the MediaPipe gesture recognition.
+#
+
+
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -27,7 +33,7 @@ attack_map = {
 
 with GestureRecognizer.create_from_options(options) as recognizer:
   # The detector is initialized. Use it here.
-  # ...
+
   # Load the input image from an image file.
   while (cap.isOpened()):
     success, image = cap.read()

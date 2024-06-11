@@ -1,3 +1,8 @@
+/*
+ * Lobby.cs - Berkan Mertan
+ * Script in charge of obtaining player preferences decided at the home screen.
+ */
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

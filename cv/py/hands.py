@@ -1,4 +1,8 @@
+#
+# hands.py - Berkan Mertan
 # Convert footage of people's hands from image and, on the SINGLE, SYNCED THREAD, process the image for hand landmarking
+# Another experimental, testing script
+#
 
 # Import necessary modules
 import mediapipe as mp
