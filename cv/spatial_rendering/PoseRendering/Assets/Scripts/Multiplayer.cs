@@ -29,12 +29,14 @@ public class Multiplayer : MonoBehaviour
     // FILL THIS FIELD IN UNITY EDITOR!!! WITH THE PLAYER PREFAB
     public GameObject playerPrefab;
     public GameObject MAINCHARACTER;
+    public Material boneMaterialHere;
     public PoseTrackingBridge bridgeHandler;
 
     // Private vars
     Room room;
     public SocketIOUnity socket;
     HashSet<string> presentUsers = new HashSet<string>();
+    HashSet<string> presentAttacks = new HashSet<string>();
     Queue<Action> UNITYTHREADQUEUE = new Queue<Action>();
 
     // Start is called before the first frame update
@@ -47,7 +49,9 @@ public class Multiplayer : MonoBehaviour
 
         MAINCHARACTER.AddComponent<SkeletalMover>();
         bridgeHandler.avatar = MAINCHARACTER.GetComponent<SkeletalMover>();
-
+        bridgeHandler.avatar.boneMaterial = boneMaterialHere;
+        bridgeHandler.avatar.attackPackingPortal = MAINCHARACTER.GetComponent<PackUserData>();
+        bridgeHandler.avatar.playerName = MAINCHARACTER.name;
         // Initialize socket system
         var uri = new Uri("http://127.0.0.1:3000");
         socket = new SocketIOUnity(uri, new SocketIOOptions
@@ -73,7 +77,7 @@ public class Multiplayer : MonoBehaviour
             {
                 UNITYTHREADQUEUE.Enqueue(() =>
                 {
-                    StartCoroutine(UpdateDBKinematicsRepeatedly(0.01f, socket));
+                    StartCoroutine(UpdateDBKinematicsRepeatedly(0.250f, socket));
                     CopyNewUserToDB(socket);
                     
                 });
@@ -142,6 +146,33 @@ public class Multiplayer : MonoBehaviour
                     newUserPacking.unpackInfoFromSerializable();
                     newUserPacking.unpacked = true;
                 }
+
+                foreach (var attackEntry in room.attacks)
+                {
+                    if (attackEntry.Key == MAINCHARACTER.name) continue;
+
+                    GameObject specifiedPlayer = GameObject.Find(attackEntry.Key);
+
+                    if (presentAttacks.Contains(attackEntry.Value.processed))
+                    {
+                        
+                        continue;
+                    }
+                    else
+                    {
+                        Debug.Log("DIDNT PROCESS THIS ONE!");
+                     
+                    }
+
+                    PackUserData newUserPacking = specifiedPlayer.GetComponent<PackUserData>();
+
+                    newUserPacking.attacks = attackEntry.Value;
+
+                    newUserPacking.unpackAttacksFromSerializable();
+                    newUserPacking.attacksUnpacked = true;
+                    presentAttacks.Add(attackEntry.Value.processed);
+                }
+                    
             });
         }
     }
@@ -156,8 +187,9 @@ public class Multiplayer : MonoBehaviour
         userPacker.packagePlayerIntoSerializable();
         // Serialize player's content
         var serializedContent = JsonConvert.SerializeObject(userPacker.player);
+        var serializedAttack = JsonConvert.SerializeObject(userPacker.attacks);
         // Ping 
-        socket.Emit("ping-kinematic-info", "VONK", MAINCHARACTER.name, serializedContent);
+        socket.Emit("ping-kinematic-info", "VONK", MAINCHARACTER.name, serializedContent, serializedAttack);
     }
 
     // Add new user through socket
@@ -170,7 +202,8 @@ public class Multiplayer : MonoBehaviour
         userPacker.packagePlayerIntoSerializable();
         // Serialize player's content
         var serializedContent = JsonConvert.SerializeObject(userPacker.player);
-        socket.Emit("add-new-user", "VONK", MAINCHARACTER.name, serializedContent);
+        var serializedAttack = JsonConvert.SerializeObject(userPacker.attacks);
+        socket.Emit("add-new-user", "VONK", MAINCHARACTER.name, serializedContent, serializedAttack);
     }
 
     public void EraseUserFromDB(SocketIOUnity socket)

@@ -120,6 +120,12 @@ async function createRoomWithName(name, flags) {
                 }
             },
             "attacks" : {
+                "Berkan": {
+                    "name": "red",
+                    "location": "0, 0, 0",
+                    "direction": "0, 0, 0",
+                    "processed" : "true"
+                }
             }
         };
 

@@ -10,12 +10,18 @@ using UnityEngine;
 using UnityEngine.Networking;
 using PropertyToolkit;
 using UserData;
+using AttackData;
+using DrawAction;
+using System.Security.Cryptography.X509Certificates;
 
 public class PackUserData : MonoBehaviour
 {
     public User player;
+    public Attack attacks;
 
     public bool unpacked = false;
+    public bool attacksUnpacked = false;
+
     public bool readyForPackaging = false;
     // Load user's hand and body kinematic structures
     GameObject [] handBuffer = new GameObject[32];
@@ -99,12 +105,27 @@ public class PackUserData : MonoBehaviour
             // Use our custom namespace for serializable object modification through string fields
             string sVec = Tools.GetPropertyValue(player.kinematics.body, property).ToString();
             bodyFeaturePosition = unpackStringIntoVector(sVec);
-
             bodyBuffer[i].transform.position = bodyFeaturePosition;
         }
 
         gameObject.name = player.username;
         unpacked = true;
+    }
+
+    public void unpackAttacksFromSerializable ()
+    {
+        if (attacks.name == "beam")
+        {
+            StartCoroutine(DrawAttack.Beam(unpackStringIntoVector(attacks.location),
+                                            unpackStringIntoVector(attacks.direction), "enemy"));
+        }
+
+        if (attacks.name == "red")
+        {
+            StartCoroutine(DrawAttack.Red(unpackStringIntoVector(attacks.location),
+                                            unpackStringIntoVector(attacks.direction), "enemy"));
+        }
+        attacksUnpacked = true;
     }
     
     // Pack all the data from the user's game data into the user data object.
@@ -134,5 +155,13 @@ public class PackUserData : MonoBehaviour
             // Use our custom namespace for serializable object modification through string fields
             Tools.SetPropertyValue(player.kinematics.body, property, stringifiedVector);
         }
+    }
+
+    public void packageAttacksIntoSerializable (string playerName, string name, Vector3 direction, Vector3 location)
+    {
+        attacks.processed = name + "-" + playerName + "-" + Random.Range(0, 100000f);
+        attacks.name = name;
+        attacks.direction = packVectorIntoString (direction);
+        attacks.location = packVectorIntoString (location);
     }
 }

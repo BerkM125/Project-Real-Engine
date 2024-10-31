@@ -32,11 +32,14 @@ app.use(routes);
 
 // Async task used in socket connection callbacks for
 // updating a user's database-stored info once they request their changes be made.
-async function refreshDBWithUserBuffer (userBuffer) {
-  await db.insertData(roomName, {
+async function refreshDBWithUserBuffer (userBuffer, attackBuffer) {
+  await db.insertData("VONK", {
     $set: {
       "users" : {
         ...userBuffer
+      },
+      "attacks" : {
+        ...attackBuffer
       }
     }
   });
@@ -69,34 +72,40 @@ io.on('connection', (socket) => {
   
   // Only for AFTER a player hasbeen instantiated, and they are pinging their info
   // back to the server to update their own logs on the database.
-  socket.on('ping-kinematic-info', async (roomName, userName, data) => {
+  socket.on('ping-kinematic-info', async (roomName, userName, data, attackData) => {
     let roomData = await db.findRoomByName(roomName);
     let userBuffer = roomData["users"];
+    let attackBuffer = roomData["attacks"];
     let newUserData = JSON.parse(data);
 
     userBuffer[userName] = newUserData;
-    await refreshDBWithUserBuffer(userBuffer);
+    attackBuffer[userName] = JSON.parse(attackData);
+    await refreshDBWithUserBuffer(userBuffer, attackBuffer);
     
   });
 
   // Only for adding a new user, BEFORE instantiation on the game end. See Unity script
   // for Multiplayer.cs to see full custom multiplayer pipeline for data transfer
-  socket.on('add-new-user', async (roomName, userName, data) => {
+  socket.on('add-new-user', async (roomName, userName, data, attackData) => {
     let roomData = await db.findRoomByName(roomName);
     let userBuffer = roomData["users"];
+    let attackBuffer = roomData["attacks"];
     let newUserData = JSON.parse(data);
 
     userBuffer = { ...userBuffer, [userName]: {...newUserData}};
-    await refreshDBWithUserBuffer(userBuffer);
+    attackBuffer = { ...attackBuffer, [userName]: {...JSON.parse(attackData)}}
+    await refreshDBWithUserBuffer(userBuffer, attackBuffer);
   });
 
   // Do not hold unnecessary data, delete a user's info when they quit the game
   socket.on('delete-user', async (roomName, userName) => {
     let roomData = await db.findRoomByName(roomName);
     let userBuffer = roomData["users"];
+    let attackBuffer = roomData["attacks"];
     delete userBuffer[userName];
+    delete attackBuffer[userName];
 
-    await refreshDBWithUserBuffer(userBuffer);
+    await refreshDBWithUserBuffer(userBuffer, attackBuffer);
   });
 });
 
@@ -105,7 +114,7 @@ io.on('connection', (socket) => {
 setInterval(async () => {
   if (dbConnected)
     io.to("VONK").emit("refresh-data-from-db", await db.findRoomByName("VONK"));
-}, 10);
+}, 250);
 
 // Connect to MongoDB
 db.connectToDatabase().then(() => {
@@ -114,7 +123,6 @@ db.connectToDatabase().then(() => {
   // Init server on port
   server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-
     // Db connection established
     dbConnected = true;
   });

@@ -64,6 +64,10 @@ public class SkeletalMover : MonoBehaviour
         };
     private Dictionary<string, List<string>> boneConnections = new Dictionary<string, List<string>>();
     public Dictionary<string, string> boneMap = new Dictionary<string, string>();
+
+    public PackUserData attackPackingPortal;
+    public string playerName;
+
     private string[] handDigits =
     {
         "thumb",
@@ -81,6 +85,9 @@ public class SkeletalMover : MonoBehaviour
     public Vector3 PLAYERCAMERAROTATION;
     // Normalized vector representing player's direction of attacks.
     public Vector3 PLAYERATTACKDIRECTION;
+
+    // Hand/bone material needed for URP in build
+    public Material boneMaterial;
 
     // If parts not mapped yet, do not proceed with avatar part transform yet.
     private uint bIndex = 0;
@@ -349,24 +356,26 @@ public class SkeletalMover : MonoBehaviour
                 string[] attackAndHand = parcelData.Split(',');
                 string attackType = attackAndHand[0];
                 string handType = attackAndHand[1];
-                
+
                 if (attackType == "BLAST AWAY!!")
                 {
                     // Gotta get our starting location first
                     Transform parentTransform = playerHandLandmarks.transform.Find($"{handType}-middle-first");
                     Vector3 startLocation = parentTransform.gameObject.transform.position;
+                    attackPackingPortal.packageAttacksIntoSerializable(playerName, "beam", PLAYERATTACKDIRECTION, startLocation);
 
                     // Start Coroutine for a beam attack, pass normalized attack direction
-                    StartCoroutine(DrawAttack.Beam(startLocation, PLAYERATTACKDIRECTION));
+                    StartCoroutine(DrawAttack.Beam(startLocation, PLAYERATTACKDIRECTION, "mc"));
                 }
                 else if (attackType == "RED!!")
                 {
                     // Gotta get our starting location first
                     Transform parentTransform = playerHandLandmarks.transform.Find($"{handType}-index-third");
                     Vector3 startLocation = parentTransform.gameObject.transform.position;
+                    attackPackingPortal.packageAttacksIntoSerializable(playerName, "red", PLAYERATTACKDIRECTION, startLocation);
 
                     // Start Coroutine for a beam attack, pass normalized attack direction
-                    StartCoroutine(DrawAttack.Red(startLocation, PLAYERATTACKDIRECTION));
+                    StartCoroutine(DrawAttack.Red(startLocation, PLAYERATTACKDIRECTION, "mc"));
                 }
             }
             // If it's not an attack, it's kinematic data.
@@ -403,7 +412,7 @@ public class SkeletalMover : MonoBehaviour
     private void UpdateCylinderPosition(GameObject cylinder, Vector3 beginPoint, Vector3 endPoint)
     {
         Vector3 pos = Vector3.Lerp(beginPoint, endPoint, 0.5f);
-
+        
         cylinder.transform.localScale = new Vector3(0.77f,
                                             Vector3.Distance(beginPoint, endPoint) * 0.5f,
                                             0.77f);
@@ -513,12 +522,14 @@ public class SkeletalMover : MonoBehaviour
         for (cN = 0; cN < 30; cN++)
         {
             givenCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            givenCylinders[cN].GetComponent<Renderer>().material = boneMaterial;
             givenCylinders[cN].transform.parent = gameObject.transform;
         }
 
         for (cN = 0; cN < 10; cN++)
         {
             givenBodyCylinders[cN] = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            givenBodyCylinders[cN].GetComponent<Renderer>().material = boneMaterial;
             givenBodyCylinders[cN].transform.parent = gameObject.transform;
         }
 

@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Newtonsoft.Json;
+using System;
 
 namespace AttackData
 {
@@ -14,9 +15,14 @@ namespace AttackData
     public class Attack
     {
         [JsonProperty("type")]
-        public string type { get; set; }
+        public string name { get; set; }
 
         [JsonProperty("location")]
         public string location { get; set; }
+        [JsonProperty("direction")]
+
+        public string direction { get; set; }
+        [JsonProperty("processed")]
+        public string processed { get; set; }
     }
 }
